@@ -12,14 +12,32 @@ from pycparser import parse_file, c_generator, c_ast, c_parser
 
 class Z3Generator(c_ast.NodeVisitor):
     def __init__(self):
+        self.in_function = False
+        self.var_dict = {}
+        self.PtrFieldSort = []
         self.statement_dict = {}
         self.line_number = 1
         self.constructs = {}
 
+    def visit_Decl(self, node):
+        if not self.in_function:
+            if isinstance(node.type, c_ast.PtrDecl):
+                self.PtrFieldSort.append(node.name)
+            if isinstance(node.type, c_ast.TypeDecl):
+                node_type = node.type.type.names[0]
+                if node_type == 'int':
+                    self.var_dict[node.name] = IntSort()
+                if node_type == 'double':
+                    self.var_dict[node.name] = RealSort()
+                if node_type == 'bool':
+                    self.var_dict[node.name] = BoolSort()
+
     def visit_FuncDef(self, node):
         # print(node.body.block_items[7])
         # while_cond.next.show()
+        self.in_function = True
         self.generic_visit(node.body)
+        self.in_function = False
 
     def generic_visit(self, node):
         if isinstance(node, c_ast.Compound):
@@ -69,8 +87,10 @@ if __name__ == "__main__":
     # ast.show(showcoord=True)
     visitor = Z3Generator()
     visitor.visit(ast)
-    print(visitor.statement_dict)
-    print(visitor.constructs)
+    # print(visitor.statement_dict)
+    # print(visitor.constructs)
+    print(visitor.var_dict)
+    print(visitor.PtrFieldSort)
     # for k, v in visitor.statement_dict.items():
     #     if isinstance(v, c_ast.Assignment):
     #         print(v)
