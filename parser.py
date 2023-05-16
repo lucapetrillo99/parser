@@ -36,15 +36,20 @@ class Z3Generator(c_ast.NodeVisitor):
                 self.visit(stmt)
 
         elif isinstance(node, c_ast.If):
+            curr_line_number = self.line_number
+            self.constructs[curr_line_number - 1] = self.line_number
             self.visit(node.iftrue)
             if node.iffalse:
+                self.constructs[curr_line_number - 1] = (self.constructs[curr_line_number - 1], self.line_number)
                 self.visit(node.iffalse)
         elif isinstance(node, c_ast.While):
-            curr_line_number = self.line_number - 1
+            curr_line_number = self.line_number
             self.visit(node.stmt)
-            self.constructs[curr_line_number] = (curr_line_number, self.line_number)
+            self.constructs[curr_line_number - 1] = (curr_line_number, self.line_number)
         elif isinstance(node, c_ast.For):
+            curr_line_number = self.line_number
             self.visit(node.stmt)
+            self.constructs[curr_line_number - 1] = (curr_line_number, self.line_number)
         else:
             super().generic_visit(node)
 
@@ -69,4 +74,3 @@ if __name__ == "__main__":
     # for k, v in visitor.statement_dict.items():
     #     if isinstance(v, c_ast.Assignment):
     #         print(v)
-
