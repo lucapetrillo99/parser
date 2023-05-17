@@ -18,6 +18,7 @@ class Z3Generator(c_ast.NodeVisitor):
         self.statement_dict = {}
         self.line_number = 1
         self.constructs = {}
+        self.function_dict = {}
 
     def visit_Decl(self, node):
         if not self.in_function:
@@ -35,6 +36,7 @@ class Z3Generator(c_ast.NodeVisitor):
     def visit_FuncDef(self, node):
         # print(node.body.block_items[7])
         # while_cond.next.show()
+        self.function_dict['F'] = "Function()"
         self.in_function = True
         self.generic_visit(node.body)
         self.in_function = False
@@ -42,7 +44,18 @@ class Z3Generator(c_ast.NodeVisitor):
     def generic_visit(self, node):
         if isinstance(node, c_ast.Compound):
             for stmt in node.block_items:
-                if not isinstance(stmt, c_ast.Decl):
+                if isinstance(stmt, c_ast.Decl):
+                    if isinstance(stmt.type, c_ast.PtrDecl):
+                        self.function_dict[stmt.name] = "F.getPtr()"
+                    else:
+                        node_type = stmt.type.type.names[0]
+                        if node_type == 'int':
+                            self.function_dict[stmt.type.declname] = "F.getVar(z3.IntSort)"
+                        if node_type == 'double':
+                            self.function_dict[stmt.type.declname] = "F.getVar(z3.RealSort)"
+                        if node_type == 'bool':
+                            self.function_dict[stmt.type.declname] = "F.getVar(z3.BoolSort)"
+                else:
                     self.statement_dict[self.line_number] = stmt
                     self.line_number += 1
                 # print(stmt)
@@ -87,10 +100,11 @@ if __name__ == "__main__":
     # ast.show(showcoord=True)
     visitor = Z3Generator()
     visitor.visit(ast)
+    print(visitor.function_dict)
     # print(visitor.statement_dict)
     # print(visitor.constructs)
-    print(visitor.var_dict)
-    print(visitor.PtrFieldSort)
+    # print(visitor.var_dict)
+    # print(visitor.PtrFieldSort)
     # for k, v in visitor.statement_dict.items():
     #     if isinstance(v, c_ast.Assignment):
     #         print(v)
