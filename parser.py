@@ -16,9 +16,10 @@ class Z3Generator(c_ast.NodeVisitor):
         self.var_dict = {}
         self.PtrFieldSort = []
         self.statement_dict = {}
-        self.line_number = 1
+        self.line_number = 0
         self.constructs = {}
         self.function_dict = {}
+        self.ptr_var = []
 
     def visit_Decl(self, node):
         if not self.in_function:
@@ -46,6 +47,7 @@ class Z3Generator(c_ast.NodeVisitor):
             for stmt in node.block_items:
                 if isinstance(stmt, c_ast.Decl):
                     if isinstance(stmt.type, c_ast.PtrDecl):
+                        self.ptr_var.append(stmt.name)
                         self.function_dict[stmt.name] = "F.getPtr()"
                     else:
                         node_type = stmt.type.type.names[0]
@@ -100,7 +102,66 @@ if __name__ == "__main__":
     # ast.show(showcoord=True)
     visitor = Z3Generator()
     visitor.visit(ast)
-    print(visitor.function_dict)
+
+    instructions = {}
+    successors = {}
+    exp = "{} {} {}"
+    listing = "listing[{0}]"
+    succ = "succ[{}]"
+    bin_exp_assign = "PL.ExpAssign({}, exp)"
+    ptr_assign = "PL.PtrAssign({}, {})"
+    heap_condition = "HeapCond.Eq({}, {})"
+
+    for k, v in visitor.statement_dict.items():
+        l = listing.format(k)
+        if isinstance(v, c_ast.Assignment):
+            if isinstance(v.rvalue, c_ast.BinaryOp):
+                instructions[l] = {"exp": exp.format(v.rvalue.left.name, v.rvalue.op, v.rvalue.right.name),
+                                   "op": bin_exp_assign.format(v.lvalue.name)}
+                s = succ.format(k)
+                successors[s] = k + 1
+            else:
+                if isinstance(v.rvalue, c_ast.Constant):
+                    r_value = v.rvalue.value
+                else:
+                    r_value = v.rvalue.name
+
+                if v.lvalue.name in visitor.ptr_var:
+                    instructions[l] = ptr_assign.format(v.lvalue.name, r_value)
+                    s = succ.format(k)
+                    successors[s] = k + 1
+                else:
+                    # TODO: syntax for unary assignments
+                    pass
+
+        elif isinstance(v, c_ast.While):
+            instructions[l] = {"cond": heap_condition.format(v.cond.left.name, v.cond.right.name),
+                               "op": "PL.While(cond)"}
+            s = succ.format(k)
+            successors[s] = visitor.constructs[k]
+
+        elif isinstance(v, c_ast.If):
+            if isinstance(v.cond.right, c_ast.Constant):
+                right = v.cond.right.value
+            else:
+                right = v.cond.right.name
+
+            instructions[l] = {"cond": exp.format(v.cond.right.value, v.cond.op, right),
+                               "op": "PL.If(cond)"}
+            s = succ.format(k)
+            successors[s] = visitor.constructs[k]
+
+        elif isinstance(v, c_ast.UnaryOp):
+            # TODO: syntax for unary operations
+            pass
+
+        elif isinstance(v, c_ast.Return):
+            instructions[l] = "PL.Exit()"
+            s = succ.format(k)
+            successors[s] = None
+
+    print(instructions)
+    print(successors)
     # print(visitor.statement_dict)
     # print(visitor.constructs)
     # print(visitor.var_dict)
