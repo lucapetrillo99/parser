@@ -1,3 +1,5 @@
+import os
+import json
 from pycparser import c_ast
 
 exp = "{} {} {}"
@@ -15,7 +17,6 @@ class FileConstructor:
         self.successors = {}
 
     def build_file(self):
-        print(self.visitor.statement_dict)
         for k, v in self.visitor.statement_dict.items():
             l = listing.format(k)
             if isinstance(v, c_ast.Assignment):
@@ -63,3 +64,21 @@ class FileConstructor:
                 self.instructions[l] = "PL.Exit()"
                 s = succ.format(k)
                 self.successors[s] = None
+
+    def write_file(self, filename):
+        os.makedirs("out", exist_ok=True)
+        f = filename.split(".")[0] + ".py"
+        with open(os.path.join("out/", f), "w") as file:
+            file.write("DataFieldSort = %s" % json.dumps(self.visitor.var_dict) + "\n")
+            file.write("PtrFieldSort = %s" % json.dumps(self.visitor.ptr_var) + "\n\n")
+            for k, v in self.visitor.function_dict.items():
+                file.write('%s = %s\n' % (k, v))
+
+            file.write('\n')
+            for k, v in zip(self.instructions.items(), self.successors.items()):
+                if isinstance(k[1], str):
+                    file.write('%s = %s\n' % (k[0], k[1]))
+                elif isinstance(k[1], dict):
+                    file.write('%s = %s\n' % (list(k[1].keys())[0], list(k[1].values())[0]))
+                    file.write('%s = %s\n' % (k[0], list(k[1].values())[1]))
+                    file.write('%s = %s\n' % (v[0], v[1]))

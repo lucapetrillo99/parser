@@ -28,7 +28,7 @@ if __name__ == "__main__":
     visitor.visit(ast)
     f_cons = FileConstructor(visitor)
     f_cons.build_file()
-    f_cons.write_file()
+    f_cons.write_file(args.filename)
     # print(instructions)
     # print(successors)
     # print(visitor.constructs)
