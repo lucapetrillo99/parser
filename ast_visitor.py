@@ -1,3 +1,4 @@
+import constants
 from pycparser import c_ast
 
 
@@ -19,14 +20,14 @@ class AstVisitor(c_ast.NodeVisitor):
             if isinstance(node.type, c_ast.TypeDecl):
                 node_type = node.type.type.names[0]
                 if node_type == 'int':
-                    self.var_dict[node.name] = "z3.IntSort()"
+                    self.var_dict[node.name] = constants.INT
                 if node_type == 'double':
-                    self.var_dict[node.name] = "z3.RealSort()"
+                    self.var_dict[node.name] = constants.REAL
                 if node_type == 'bool':
-                    self.var_dict[node.name] = "z3.BoolSort()"
+                    self.var_dict[node.name] = constants.BOOL
 
     def visit_FuncDef(self, node):
-        self.function_dict['F'] = "Function()"
+        self.function_dict['F'] = constants.FUNCTION
         self.in_function = True
         self.generic_visit(node.body)
         self.in_function = False
@@ -37,15 +38,15 @@ class AstVisitor(c_ast.NodeVisitor):
                 if isinstance(stmt, c_ast.Decl):
                     if isinstance(stmt.type, c_ast.PtrDecl):
                         self.ptr_var.append(stmt.name)
-                        self.function_dict[stmt.name] = "F.getPtr()"
+                        self.function_dict[stmt.name] = constants.GET_PTR
                     else:
                         node_type = stmt.type.type.names[0]
                         if node_type == 'int':
-                            self.function_dict[stmt.type.declname] = "F.getVar(z3.IntSort)"
+                            self.function_dict[stmt.type.declname] = constants.GET_INT
                         if node_type == 'double':
-                            self.function_dict[stmt.type.declname] = "F.getVar(z3.RealSort)"
+                            self.function_dict[stmt.type.declname] = constants.GET_REAL
                         if node_type == 'bool':
-                            self.function_dict[stmt.type.declname] = "F.getVar(z3.BoolSort)"
+                            self.function_dict[stmt.type.declname] = constants.GET_BOOL
                 else:
                     self.statement_dict[self.line_number] = stmt
                     self.line_number += 1
