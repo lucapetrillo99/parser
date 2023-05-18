@@ -25,3 +25,7 @@ HEAP_COND = "HeapCond.Eq({}, {})"
 WHILE_COND = "PL.While(cond)"
 IF_COND = "PL.If(cond)"
 EXIT_COND = "PL.Exit()"
+
+# program output directory
+
+OUT_DIR = "out/"

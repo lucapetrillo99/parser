@@ -61,7 +61,7 @@ class FileConstructor:
                 self.successors[succ] = None
 
     def write_file(self, filename):
-        os.makedirs("out", exist_ok=True)
+        os.makedirs(constants.OUT_DIR, exist_ok=True)
         f = filename.split(".")[0] + ".py"
         with open(os.path.join("out/", f), "w") as file:
             file.write("%s = %s\n" % (constants.DATA_DECL, json.dumps(self.visitor.var_dict)))
