@@ -51,7 +51,7 @@ class FileConstructor:
                 else:
                     right = v.cond.right.name
 
-                self.instructions[l] = {"cond": exp.format(v.cond.right.value, v.cond.op, right),
+                self.instructions[l] = {"cond": exp.format(v.cond.left.name, v.cond.op, right),
                                         "op": "PL.If(cond)"}
                 s = succ.format(k)
                 self.successors[s] = self.visitor.constructs[k]
@@ -78,6 +78,7 @@ class FileConstructor:
             for k, v in zip(self.instructions.items(), self.successors.items()):
                 if isinstance(k[1], str):
                     file.write('%s = %s\n' % (k[0], k[1]))
+                    file.write('%s = %s\n' % (v[0], v[1]))
                 elif isinstance(k[1], dict):
                     file.write('%s = %s\n' % (list(k[1].keys())[0], list(k[1].values())[0]))
                     file.write('%s = %s\n' % (k[0], list(k[1].values())[1]))
