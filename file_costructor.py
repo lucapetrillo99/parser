@@ -65,7 +65,7 @@ class FileConstructor:
         f = filename.split(".")[0] + ".py"
         with open(os.path.join("out/", f), "w") as file:
             file.write("%s = %s\n" % (constants.DATA_DECL, json.dumps(self.visitor.var_dict)))
-            file.write("%s = %s\n\n" % (constants.PTR_DECL, json.dumps(self.visitor.ptr_var)))
+            file.write("%s = %s\n\n" % (constants.PTR_DECL, json.dumps(self.visitor.PtrFieldSort)))
             for k, v in self.visitor.function_dict.items():
                 file.write('%s = %s\n' % (k, v))
 
