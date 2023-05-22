@@ -17,7 +17,7 @@ class AstVisitor(c_ast.NodeVisitor):
         if not self.in_function:
             if isinstance(node.type, c_ast.PtrDecl):
                 self.PtrFieldSort.append(node.name)
-            if isinstance(node.type, c_ast.TypeDecl):
+            elif isinstance(node.type, c_ast.TypeDecl):
                 node_type = node.type.type.names[0]
                 if node_type == 'int':
                     self.var_dict[node.name] = constants.INT
@@ -25,6 +25,19 @@ class AstVisitor(c_ast.NodeVisitor):
                     self.var_dict[node.name] = constants.REAL
                 if node_type == 'bool':
                     self.var_dict[node.name] = constants.BOOL
+            elif isinstance(node.type, c_ast.Struct):
+                declarations = node.type.decls
+                for decl in declarations:
+                    if isinstance(decl.type, c_ast.PtrDecl):
+                        self.PtrFieldSort.append(decl.name)
+                    elif isinstance(decl.type, c_ast.TypeDecl):
+                        node_type = decl.type.type.names[0]
+                        if node_type == 'int':
+                            self.var_dict[decl.name] = constants.INT
+                        if node_type == 'double':
+                            self.var_dict[decl.name] = constants.REAL
+                        if node_type == 'bool':
+                            self.var_dict[decl.name] = constants.BOOL
 
     def visit_FuncDef(self, node):
         self.function_dict['F'] = constants.FUNCTION
