@@ -62,7 +62,8 @@ class FileConstructor:
 
     def write_file(self, filename):
         os.makedirs(constants.OUT_DIR, exist_ok=True)
-        f = filename.split(".")[0] + ".py"
+        split_file = filename.split(".")[0].split("/")
+        f = split_file[len(split_file) - 1] + ".py"
         with open(os.path.join("out/", f), "w") as file:
             file.write("%s = %s\n" % (constants.DATA_DECL, json.dumps(self.visitor.var_dict)))
             file.write("%s = %s\n\n" % (constants.PTR_DECL, json.dumps(self.visitor.PtrFieldSort)))
