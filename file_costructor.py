@@ -35,8 +35,15 @@ class FileConstructor:
                         pass
 
             elif isinstance(v, c_ast.While):
-                self.instructions[listing] = {"cond": constants.HEAP_COND.format(v.cond.left.name, v.cond.right.name),
-                                              "op": constants.WHILE_COND}
+                try:
+                    self.instructions[listing] = {"cond": constants.HEAP_COND.format(v.cond.left.name,
+                                                                                     v.cond.right.name),
+                                                  "op": constants.WHILE_COND}
+                except AttributeError:
+                    self.instructions[listing] = {
+                        "cond": constants.HEAP_COND.format(v.cond.left.name, v.cond.right),
+                        "op": constants.WHILE_COND}
+
                 succ = constants.SUCCESSOR.format(k)
                 self.successors[succ] = self.visitor.constructs[k]
 
