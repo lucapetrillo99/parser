@@ -31,8 +31,12 @@ class FileConstructor:
                         succ = constants.SUCCESSOR.format(k)
                         self.successors[succ] = k + 1
                     else:
-                        self.instructions[listing] = {
-                            "exp": v.rvalue.name, "op": constants.BIN_EXPR_ASSIGN.format(v.lvalue.name)}
+                        if isinstance(v.rvalue, c_ast.Constant):
+                            self.instructions[listing] = {"exp": v.rvalue.value,
+                                                          "op": constants.BIN_EXPR_ASSIGN.format(v.lvalue.name)}
+                        else:
+                            self.instructions[listing] = {"exp": v.rvalue.name,
+                                                          "op": constants.BIN_EXPR_ASSIGN.format(v.lvalue.name)}
                         succ = constants.SUCCESSOR.format(k)
                         self.successors[succ] = k + 1
 
