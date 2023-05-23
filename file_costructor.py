@@ -65,8 +65,17 @@ class FileConstructor:
                 self.successors[succ] = self.visitor.constructs[k]
 
             elif isinstance(v, c_ast.UnaryOp):
-                # TODO: syntax for unary operations
-                pass
+                if v.op == "p++":
+                    self.instructions[listing] = {
+                        "exp": constants.EXPRESSION.format(v.expr.name, "+", "1"),
+                        "op": constants.BIN_EXPR_ASSIGN.format(v.expr.name)}
+                else:
+                    self.instructions[listing] = {
+                        "exp": constants.EXPRESSION.format(v.expr.name, "-", "1"),
+                        "op": constants.BIN_EXPR_ASSIGN.format(v.expr.name)}
+
+                succ = constants.SUCCESSOR.format(k)
+                self.successors[succ] = k + 1
 
             elif isinstance(v, c_ast.Return):
                 self.instructions[listing] = constants.EXIT_COND
