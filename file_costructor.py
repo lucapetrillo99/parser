@@ -31,8 +31,10 @@ class FileConstructor:
                         succ = constants.SUCCESSOR.format(k)
                         self.successors[succ] = k + 1
                     else:
-                        # TODO: syntax for unary assignments
-                        pass
+                        self.instructions[listing] = {
+                            "exp": v.rvalue.name, "op": constants.BIN_EXPR_ASSIGN.format(v.lvalue.name)}
+                        succ = constants.SUCCESSOR.format(k)
+                        self.successors[succ] = k + 1
 
             elif isinstance(v, c_ast.While):
                 try:
