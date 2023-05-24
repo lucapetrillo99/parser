@@ -25,6 +25,7 @@ EQ_HEAP_COND = "HeapCond.Eq({}, {})"
 NEQ_HEAP_COND = "HeapCond.Neq({}, {})"
 WHILE_COND = "PL.While(cond)"
 IF_COND = "PL.If(cond)"
+SKIP = "PL.Skip()"
 EXIT_COND = "PL.Exit()"
 
 # program output directory

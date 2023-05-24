@@ -2,7 +2,7 @@ from __future__ import print_function
 import argparse
 import sys
 
-from z3 import *
+# from z3 import *
 
 # This is not required if you've installed pycparser into
 # your site-packages/ with setup.py
@@ -24,7 +24,9 @@ if __name__ == "__main__":
                      cpp_args=r'-Iutils/fake_libc_include')
 
     # ast.show(showcoord=True)
-    visitor = AstVisitor()
+    inst_num = len(ast.ext) - 1
+    last_return = ast.ext[inst_num].body.block_items[len(ast.ext[inst_num].body.block_items) - 1].coord.line
+    visitor = AstVisitor(last_return)
     visitor.visit(ast)
     f_cons = FileConstructor(visitor)
     f_cons.build_file()

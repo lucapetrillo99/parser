@@ -3,7 +3,7 @@ from pycparser import c_ast
 
 
 class AstVisitor(c_ast.NodeVisitor):
-    def __init__(self):
+    def __init__(self, return_line):
         self.in_function = False
         self.var_dict = {}
         self.PtrFieldSort = []
@@ -12,6 +12,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.constructs = {}
         self.function_dict = {}
         self.ptr_var = []
+        self.return_line = return_line
 
     def visit_Decl(self, node):
         if not self.in_function:
@@ -40,6 +41,11 @@ class AstVisitor(c_ast.NodeVisitor):
                             self.var_dict[decl.name] = constants.BOOL
 
     def visit_FuncDef(self, node):
+        # TODO: while implementation
+        # for i, stmt in enumerate(node.body.block_items):
+        #     if isinstance(stmt, c_ast.While):
+        #         print(node.body.block_items[i - 1])
+
         self.function_dict['F'] = constants.FUNCTION
         self.in_function = True
         self.generic_visit(node.body)
@@ -61,8 +67,17 @@ class AstVisitor(c_ast.NodeVisitor):
                         if node_type == 'bool':
                             self.function_dict[stmt.type.declname] = constants.GET_BOOL
                 else:
-                    self.statement_dict[self.line_number] = stmt
-                    self.line_number += 1
+                    if isinstance(stmt, c_ast.Return):
+                        if stmt.coord.line != self.return_line:
+                            self.statement_dict[self.line_number] = stmt
+                            self.constructs[self.line_number] = constants.SKIP
+                            self.line_number += 1
+                        else:
+                            self.statement_dict[self.line_number] = stmt
+                            self.line_number += 1
+                    else:
+                        self.statement_dict[self.line_number] = stmt
+                        self.line_number += 1
 
                 self.visit(stmt)
 

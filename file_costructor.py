@@ -78,9 +78,15 @@ class FileConstructor:
                 self.successors[succ] = k + 1
 
             elif isinstance(v, c_ast.Return):
-                self.instructions[listing] = constants.EXIT_COND
-                succ = constants.SUCCESSOR.format(k)
-                self.successors[succ] = None
+                try:
+                    self.instructions[listing] = self.visitor.constructs[k]
+                    succ = constants.SUCCESSOR.format(k)
+                    self.successors[succ] = list(self.visitor.statement_dict)[-1]
+
+                except KeyError:
+                    self.instructions[listing] = constants.EXIT_COND
+                    succ = constants.SUCCESSOR.format(k)
+                    self.successors[succ] = None
 
     def write_file(self, filename):
         os.makedirs(constants.OUT_DIR, exist_ok=True)
