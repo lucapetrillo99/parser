@@ -15,28 +15,48 @@ class FileConstructor:
             listing = constants.LISTING.format(k)
             if isinstance(v, c_ast.Assignment):
                 if isinstance(v.rvalue, c_ast.BinaryOp):
+                    if isinstance(v.lvalue, c_ast.StructRef):
+                        l_value = constants.STRUCT_VAR.format(v.lvalue.name.name, v.lvalue.type, v.lvalue.field.name)
+                    else:
+                        l_value = v.lvalue.name
+
+                    if isinstance(v.rvalue.left, c_ast.StructRef):
+                        left_r_value = constants.STRUCT_VAR.format(v.rvalue.left.name.name, v.rvalue.left.type,
+                                                                   v.rvalue.left.field.name)
+                    else:
+                        left_r_value = v.rvalue.left.name
+
+                    if isinstance(v.rvalue.right, c_ast.StructRef):
+                        right_r_value = constants.STRUCT_VAR.format(v.rvalue.left.name.name, v.rvalue.left.type,
+                                                                    v.rvalue.left.field.name)
+                    else:
+                        right_r_value = v.rvalue.right.name
+
                     self.instructions[listing] = {
-                        "exp": constants.EXPRESSION.format(v.rvalue.left.name, v.rvalue.op, v.rvalue.right.name),
-                        "op": constants.BIN_EXPR_ASSIGN.format(v.lvalue.name)}
+                        "exp": constants.EXPRESSION.format(left_r_value, v.rvalue.op, right_r_value),
+                        "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
                     succ = constants.SUCCESSOR.format(k)
                     self.successors[succ] = k + 1
                 else:
-                    if isinstance(v.rvalue, c_ast.Constant):
+                    if isinstance(v.lvalue, c_ast.StructRef):
+                        l_value = constants.STRUCT_VAR.format(v.lvalue.name.name, v.lvalue.type, v.lvalue.field.name)
+                    else:
+                        l_value = v.lvalue.name
+
+                    if isinstance(v.rvalue, c_ast.StructRef):
+                        r_value = constants.STRUCT_VAR.format(v.rvalue.name.name, v.rvalue.type, v.rvalue.field.name)
+                    elif isinstance(v.rvalue, c_ast.Constant):
                         r_value = v.rvalue.value
                     else:
                         r_value = v.rvalue.name
 
-                    if v.lvalue.name in self.visitor.ptr_var:
-                        self.instructions[listing] = constants.PTR_ASSIGN.format(v.lvalue.name, r_value)
+                    if l_value in self.visitor.ptr_var:
+                        self.instructions[listing] = constants.PTR_ASSIGN.format(l_value, r_value)
                         succ = constants.SUCCESSOR.format(k)
                         self.successors[succ] = k + 1
                     else:
-                        if isinstance(v.rvalue, c_ast.Constant):
-                            self.instructions[listing] = {"exp": v.rvalue.value,
-                                                          "op": constants.BIN_EXPR_ASSIGN.format(v.lvalue.name)}
-                        else:
-                            self.instructions[listing] = {"exp": v.rvalue.name,
-                                                          "op": constants.BIN_EXPR_ASSIGN.format(v.lvalue.name)}
+                        self.instructions[listing] = {"exp": r_value,
+                                                      "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
                         succ = constants.SUCCESSOR.format(k)
                         self.successors[succ] = k + 1
 

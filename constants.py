@@ -17,6 +17,7 @@ GET_BOOL = "F.getVar(z3.BoolSort)"
 # functions instructions
 
 EXPRESSION = "{} {} {}"
+STRUCT_VAR = "{} {} {}"
 LISTING = "listing[{0}]"
 SUCCESSOR = "succ[{}]"
 BIN_EXPR_ASSIGN = "PL.ExpAssign({}, exp)"

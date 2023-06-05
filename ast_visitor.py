@@ -41,10 +41,6 @@ class AstVisitor(c_ast.NodeVisitor):
                             self.var_dict[decl.name] = constants.BOOL
 
     def visit_FuncDef(self, node):
-        # TODO: while implementation
-        # for i, stmt in enumerate(node.body.block_items):
-        #     if isinstance(stmt, c_ast.While):
-        #         print(node.body.block_items[i - 1])
 
         self.function_dict['F'] = constants.FUNCTION
         self.in_function = True
