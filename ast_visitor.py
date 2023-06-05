@@ -12,6 +12,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.constructs = {}
         self.function_dict = {}
         self.ptr_var = []
+        self.vars = []
         self.return_line = return_line
 
     def visit_Decl(self, node):
@@ -41,8 +42,6 @@ class AstVisitor(c_ast.NodeVisitor):
                             self.var_dict[decl.name] = constants.BOOL
 
     def visit_FuncDef(self, node):
-
-        self.function_dict['F'] = constants.FUNCTION
         self.in_function = True
         self.generic_visit(node.body)
         self.in_function = False
@@ -53,15 +52,19 @@ class AstVisitor(c_ast.NodeVisitor):
                 if isinstance(stmt, c_ast.Decl):
                     if isinstance(stmt.type, c_ast.PtrDecl):
                         self.ptr_var.append(stmt.name)
-                        self.function_dict[stmt.name] = constants.GET_PTR
+                        self.function_dict[stmt.name] = constants.GET_PTR.format(stmt.name)
                     else:
+                        self.vars.append(stmt.name)
                         node_type = stmt.type.type.names[0]
                         if node_type == 'int':
-                            self.function_dict[stmt.type.declname] = constants.GET_INT
+                            self.function_dict[stmt.type.declname] = constants.GET_VAR.format(stmt.type.declname,
+                                                                                              constants.INT)
                         if node_type == 'double':
-                            self.function_dict[stmt.type.declname] = constants.GET_REAL
+                            self.function_dict[stmt.type.declname] = constants.GET_VAR.format(stmt.type.declname,
+                                                                                              constants.REAL)
                         if node_type == 'bool':
-                            self.function_dict[stmt.type.declname] = constants.GET_BOOL
+                            self.function_dict[stmt.type.declname] = constants.GET_VAR.format(stmt.type.declname,
+                                                                                              constants.BOOL)
                 else:
                     if isinstance(stmt, c_ast.Return):
                         if stmt.coord.line != self.return_line:

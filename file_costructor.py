@@ -1,5 +1,4 @@
 import os
-import json
 import constants
 from pycparser import c_ast
 
@@ -113,8 +112,17 @@ class FileConstructor:
         split_file = filename.split(".")[0].split("/")
         f = split_file[len(split_file) - 1] + ".py"
         with open(os.path.join("out/", f), "w") as file:
-            file.write("%s = %s\n" % (constants.DATA_DECL, json.dumps(self.visitor.var_dict)))
-            file.write("%s = %s\n\n" % (constants.PTR_DECL, json.dumps(self.visitor.PtrFieldSort)))
+            file.write("%s\n" % constants.TREE_DECL.format(len(self.visitor.var_dict), len(self.visitor.PtrFieldSort)))
+
+            for ptr in self.visitor.PtrFieldSort:
+                file.write("%s = %s\n" % (ptr, constants.PTR_DECL.format(ptr)))
+
+            for name, var_type in self.visitor.var_dict.items():
+                file.write("%s = %s\n" % (name, constants.VAR_DECL.format(name, var_type)))
+
+            file.write("\n")
+            file.write("%s\n" % constants.FUNCTION.format(len(self.visitor.vars), len(self.visitor.ptr_var)))
+
             for k, v in self.visitor.function_dict.items():
                 file.write('%s = %s\n' % (k, v))
 
@@ -127,3 +135,6 @@ class FileConstructor:
                     file.write('%s = %s\n' % (list(k[1].keys())[0], list(k[1].values())[0]))
                     file.write('%s = %s\n' % (k[0], list(k[1].values())[1]))
                     file.write('%s = %s\n' % (v[0], v[1]))
+
+            file.write("\n")
+            file.write(constants.FUNCTION_CLOSE)
