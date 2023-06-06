@@ -34,8 +34,13 @@ class FileConstructor:
                     self.instructions[listing] = {
                         "exp": constants.EXPRESSION.format(left_r_value, v.rvalue.op, right_r_value),
                         "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
+
                     succ = constants.SUCCESSOR.format(k)
-                    self.successors[succ] = k + 1
+                    if k in list(self.visitor.if_line.keys()):
+                        self.successors[succ] = self.visitor.if_line[k]
+                    else:
+                        self.successors[succ] = k + 1
+
                 else:
                     if isinstance(v.lvalue, c_ast.StructRef):
                         l_value = constants.STRUCT_VAR.format(v.lvalue.name.name, v.lvalue.type, v.lvalue.field.name)
@@ -55,12 +60,14 @@ class FileConstructor:
 
                     if l_value in self.visitor.ptr_var:
                         self.instructions[listing] = constants.PTR_ASSIGN.format(l_value, r_value)
-                        succ = constants.SUCCESSOR.format(k)
-                        self.successors[succ] = k + 1
                     else:
                         self.instructions[listing] = {"exp": r_value,
                                                       "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
-                        succ = constants.SUCCESSOR.format(k)
+
+                    succ = constants.SUCCESSOR.format(k)
+                    if k in list(self.visitor.if_line.keys()):
+                        self.successors[succ] = self.visitor.if_line[k]
+                    else:
                         self.successors[succ] = k + 1
 
             elif isinstance(v, c_ast.While):
@@ -106,7 +113,10 @@ class FileConstructor:
                         "op": constants.BIN_EXPR_ASSIGN.format(v.expr.name)}
 
                 succ = constants.SUCCESSOR.format(k)
-                self.successors[succ] = k + 1
+                if k in list(self.visitor.if_line.keys()):
+                    self.successors[succ] = self.visitor.if_line[k]
+                else:
+                    self.successors[succ] = k + 1
 
             elif isinstance(v, c_ast.Return):
                 try:

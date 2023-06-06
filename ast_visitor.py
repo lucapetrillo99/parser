@@ -13,6 +13,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.function_dict = {}
         self.ptr_var = []
         self.vars = []
+        self.if_line = {}
         self.return_line = return_line
 
     def visit_Decl(self, node):
@@ -84,9 +85,12 @@ class AstVisitor(c_ast.NodeVisitor):
             curr_line_number = self.line_number
             self.constructs[curr_line_number - 1] = self.line_number
             self.visit(node.iftrue)
+            last_if_true = self.line_number - 1
             if node.iffalse:
                 self.constructs[curr_line_number - 1] = (self.constructs[curr_line_number - 1], self.line_number)
                 self.visit(node.iffalse)
+                self.if_line[last_if_true] = self.line_number
+
         elif isinstance(node, c_ast.While):
             curr_line_number = self.line_number
             self.visit(node.stmt)
