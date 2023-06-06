@@ -107,14 +107,19 @@ class FileConstructor:
                 self.successors[succ] = self.visitor.constructs[k]
 
             elif isinstance(v, c_ast.UnaryOp):
+                if isinstance(v.expr, c_ast.StructRef):
+                    variable_name = v.expr.name.name + v.expr.type + v.expr.field.name
+                else:
+                    variable_name = v.expr.name
+
                 if v.op == "p++":
                     self.instructions[listing] = {
-                        "exp": constants.EXPRESSION.format(v.expr.name, "+", "1"),
-                        "op": constants.BIN_EXPR_ASSIGN.format(v.expr.name)}
+                        "exp": constants.EXPRESSION.format(variable_name, "+", "1"),
+                        "op": constants.BIN_EXPR_ASSIGN.format(variable_name)}
                 else:
                     self.instructions[listing] = {
-                        "exp": constants.EXPRESSION.format(v.expr.name, "-", "1"),
-                        "op": constants.BIN_EXPR_ASSIGN.format(v.expr.name)}
+                        "exp": constants.EXPRESSION.format(variable_name, "-", "1"),
+                        "op": constants.BIN_EXPR_ASSIGN.format(variable_name)}
 
                 succ = constants.SUCCESSOR.format(k)
                 if k in list(self.visitor.if_line.keys()):
