@@ -12,6 +12,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.constructs = {}
         self.function_dict = {}
         self.ptr_var = []
+        self.function_ptr = []
         self.vars = []
         self.if_line = {}
         self.return_line = return_line
@@ -43,6 +44,10 @@ class AstVisitor(c_ast.NodeVisitor):
                             self.var_dict[decl.name] = constants.BOOL
 
     def visit_FuncDef(self, node):
+        for decl in node.decl.type.args.params:
+            if isinstance(decl.type, c_ast.PtrDecl):
+                self.ptr_var.append(decl.name)
+
         self.in_function = True
         self.generic_visit(node.body)
         self.in_function = False
@@ -53,6 +58,7 @@ class AstVisitor(c_ast.NodeVisitor):
                 if isinstance(stmt, c_ast.Decl):
                     if isinstance(stmt.type, c_ast.PtrDecl):
                         self.ptr_var.append(stmt.name)
+                        self.function_ptr.append(stmt.name)
                         self.function_dict[stmt.name] = constants.GET_PTR.format(stmt.name)
                     else:
                         self.vars.append(stmt.name)

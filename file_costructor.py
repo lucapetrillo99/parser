@@ -42,14 +42,18 @@ class FileConstructor:
                         self.successors[succ] = k + 1
 
                 else:
+                    is_ptr = False
                     if isinstance(v.lvalue, c_ast.StructRef):
+                        is_ptr = True
                         l_value = constants.STRUCT_VAR.format(v.lvalue.name.name, v.lvalue.type, v.lvalue.field.name)
                     elif isinstance(v.lvalue, c_ast.UnaryOp):
+                        is_ptr = True
                         l_value = v.lvalue.op + v.lvalue.expr.name
                     else:
                         l_value = v.lvalue.name
 
                     if isinstance(v.rvalue, c_ast.StructRef):
+                        is_ptr = True
                         r_value = constants.STRUCT_VAR.format(v.rvalue.name.name, v.rvalue.type, v.rvalue.field.name)
                     elif isinstance(v.rvalue, c_ast.Constant):
                         r_value = v.rvalue.value
@@ -58,7 +62,7 @@ class FileConstructor:
                     else:
                         r_value = v.rvalue.name
 
-                    if l_value in self.visitor.ptr_var:
+                    if l_value in self.visitor.ptr_var or is_ptr:
                         self.instructions[listing] = constants.PTR_ASSIGN.format(l_value, r_value)
                     else:
                         self.instructions[listing] = {"exp": r_value,
@@ -143,7 +147,7 @@ class FileConstructor:
                 file.write("%s = %s\n" % (name, constants.VAR_DECL.format(name, var_type)))
 
             file.write("\n")
-            file.write("%s\n" % constants.FUNCTION.format(len(self.visitor.vars), len(self.visitor.ptr_var)))
+            file.write("%s\n" % constants.FUNCTION.format(len(self.visitor.vars), len(self.visitor.function_ptr)))
 
             for k, v in self.visitor.function_dict.items():
                 file.write('%s = %s\n' % (k, v))
