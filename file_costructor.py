@@ -10,109 +10,64 @@ class FileConstructor:
         self.successors = {}
 
     def build_file(self):
-        for k, v in self.visitor.statement_dict.items():
-            listing = constants.LISTING.format(k)
-            if isinstance(v, c_ast.Assignment):
-                if isinstance(v.rvalue, c_ast.BinaryOp):
-                    if isinstance(v.lvalue, c_ast.StructRef):
-                        l_value = constants.STRUCT_VAR.format(v.lvalue.name.name, v.lvalue.type, v.lvalue.field.name)
-                    else:
-                        l_value = v.lvalue.name
-
-                    if isinstance(v.rvalue.left, c_ast.StructRef):
-                        left_r_value = constants.STRUCT_VAR.format(v.rvalue.left.name.name, v.rvalue.left.type,
-                                                                   v.rvalue.left.field.name)
-                    else:
-                        left_r_value = v.rvalue.left.name
-
-                    if isinstance(v.rvalue.right, c_ast.StructRef):
-                        right_r_value = constants.STRUCT_VAR.format(v.rvalue.left.name.name, v.rvalue.left.type,
-                                                                    v.rvalue.left.field.name)
-                    else:
-                        right_r_value = v.rvalue.right.name
+        for line, instruction in self.visitor.statement_dict.items():
+            listing = constants.LISTING.format(line)
+            if isinstance(instruction, c_ast.Assignment):
+                if isinstance(instruction.rvalue, c_ast.BinaryOp):
+                    l_value, left_r_value, right_r_value = self.__binary_assignment_handler(instruction)
 
                     self.instructions[listing] = {
-                        "exp": constants.EXPRESSION.format(left_r_value, v.rvalue.op, right_r_value),
+                        "exp": constants.EXPRESSION.format(left_r_value, instruction.rvalue.op, right_r_value),
                         "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
 
-                    succ = constants.SUCCESSOR.format(k)
-                    if k in list(self.visitor.if_line.keys()):
-                        self.successors[succ] = self.visitor.if_line[k]
+                    succ = constants.SUCCESSOR.format(line)
+                    if line in list(self.visitor.if_line.keys()):
+                        self.successors[succ] = self.visitor.if_line[line]
                     else:
-                        self.successors[succ] = k + 1
+                        self.successors[succ] = line + 1
 
                 else:
-                    is_ptr = False
-                    if isinstance(v.lvalue, c_ast.StructRef):
-                        is_ptr = True
-                        l_value = constants.STRUCT_VAR.format(v.lvalue.name.name, v.lvalue.type, v.lvalue.field.name)
-                    elif isinstance(v.lvalue, c_ast.UnaryOp):
-                        is_ptr = True
-                        l_value = v.lvalue.op + v.lvalue.expr.name
-                    else:
-                        l_value = v.lvalue.name
-
-                    if isinstance(v.rvalue, c_ast.StructRef):
-                        is_ptr = True
-                        r_value = constants.STRUCT_VAR.format(v.rvalue.name.name, v.rvalue.type, v.rvalue.field.name)
-                    elif isinstance(v.rvalue, c_ast.Constant):
-                        r_value = v.rvalue.value
-                    elif isinstance(v.rvalue, c_ast.UnaryOp):
-                        r_value = v.rvalue.op + v.rvalue.expr.name
-                    else:
-                        r_value = v.rvalue.name
-
+                    l_value, r_value, is_ptr = self.__unary_assignment_handler(instruction)
                     if l_value in self.visitor.ptr_var or is_ptr:
                         self.instructions[listing] = constants.PTR_ASSIGN.format(l_value, r_value)
                     else:
                         self.instructions[listing] = {"exp": r_value,
                                                       "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
 
-                    succ = constants.SUCCESSOR.format(k)
-                    if k in list(self.visitor.if_line.keys()):
-                        self.successors[succ] = self.visitor.if_line[k]
+                    succ = constants.SUCCESSOR.format(line)
+                    if line in list(self.visitor.if_line.keys()):
+                        self.successors[succ] = self.visitor.if_line[line]
                     else:
-                        self.successors[succ] = k + 1
+                        self.successors[succ] = line + 1
 
-            elif isinstance(v, c_ast.While):
-                if v.cond.op == "==":
-                    self.instructions[listing] = {"cond": constants.EQ_HEAP_COND.format(v.cond.left.name,
-                                                                                        v.cond.right.name),
+            elif isinstance(instruction, c_ast.While):
+                if instruction.cond.op == "==":
+                    self.instructions[listing] = {"cond": constants.EQ_HEAP_COND.format(instruction.cond.left.name,
+                                                                                        instruction.cond.right.name),
                                                   "op": constants.WHILE_COND}
                 else:
-                    self.instructions[listing] = {"cond": constants.NEQ_HEAP_COND.format(v.cond.left.name,
-                                                                                         v.cond.right.name),
+                    self.instructions[listing] = {"cond": constants.NEQ_HEAP_COND.format(instruction.cond.left.name,
+                                                                                         instruction.cond.right.name),
                                                   "op": constants.WHILE_COND}
 
-                succ = constants.SUCCESSOR.format(k)
-                self.successors[succ] = self.visitor.constructs[k]
+                succ = constants.SUCCESSOR.format(line)
+                self.successors[succ] = self.visitor.constructs[line]
 
-            elif isinstance(v, c_ast.If):
-                if isinstance(v.cond.left, c_ast.UnaryOp):
-                    v_cond_left = v.cond.left.op + v.cond.left.expr.name
-                    v_cond_right = v.cond.right.name
-                elif isinstance(v.cond.right, c_ast.UnaryOp):
-                    v_cond_left = v.cond.left.name
-                    v_cond_right = v.cond.right.op + v.cond.right.expr.name
-                elif isinstance(v.cond.right, c_ast.Constant):
-                    v_cond_left = v.cond.left.name
-                    v_cond_right = v.cond.right.value
+            elif isinstance(instruction, c_ast.If):
+                left_cond, right_cond = self.__unary_operation_handler(instruction)
+                self.instructions[listing] = {
+                    "cond": constants.EXPRESSION.format(left_cond, instruction.cond.op, right_cond),
+                    "op": constants.IF_COND}
+                succ = constants.SUCCESSOR.format(line)
+                self.successors[succ] = self.visitor.constructs[line]
+
+            elif isinstance(instruction, c_ast.UnaryOp):
+                if isinstance(instruction.expr, c_ast.StructRef):
+                    variable_name = instruction.expr.name.name + instruction.expr.type + instruction.expr.field.name
                 else:
-                    v_cond_left = v.cond.left.name
-                    v_cond_right = v.cond.right.name
+                    variable_name = instruction.expr.name
 
-                self.instructions[listing] = {"cond": constants.EXPRESSION.format(v_cond_left, v.cond.op, v_cond_right),
-                                              "op": constants.IF_COND}
-                succ = constants.SUCCESSOR.format(k)
-                self.successors[succ] = self.visitor.constructs[k]
-
-            elif isinstance(v, c_ast.UnaryOp):
-                if isinstance(v.expr, c_ast.StructRef):
-                    variable_name = v.expr.name.name + v.expr.type + v.expr.field.name
-                else:
-                    variable_name = v.expr.name
-
-                if v.op == "p++":
+                if instruction.op == "p++":
                     self.instructions[listing] = {
                         "exp": constants.EXPRESSION.format(variable_name, "+", "1"),
                         "op": constants.BIN_EXPR_ASSIGN.format(variable_name)}
@@ -121,21 +76,21 @@ class FileConstructor:
                         "exp": constants.EXPRESSION.format(variable_name, "-", "1"),
                         "op": constants.BIN_EXPR_ASSIGN.format(variable_name)}
 
-                succ = constants.SUCCESSOR.format(k)
-                if k in list(self.visitor.if_line.keys()):
-                    self.successors[succ] = self.visitor.if_line[k]
+                succ = constants.SUCCESSOR.format(line)
+                if line in list(self.visitor.if_line.keys()):
+                    self.successors[succ] = self.visitor.if_line[line]
                 else:
-                    self.successors[succ] = k + 1
+                    self.successors[succ] = line + 1
 
-            elif isinstance(v, c_ast.Return):
+            elif isinstance(instruction, c_ast.Return):
                 try:
-                    self.instructions[listing] = self.visitor.constructs[k]
-                    succ = constants.SUCCESSOR.format(k)
+                    self.instructions[listing] = self.visitor.constructs[line]
+                    succ = constants.SUCCESSOR.format(line)
                     self.successors[succ] = list(self.visitor.statement_dict)[-1]
 
                 except KeyError:
                     self.instructions[listing] = constants.EXIT_COND
-                    succ = constants.SUCCESSOR.format(k)
+                    succ = constants.SUCCESSOR.format(line)
                     self.successors[succ] = None
 
     def write_file(self, filename):
@@ -169,3 +124,65 @@ class FileConstructor:
 
             file.write("\n")
             file.write(constants.FUNCTION_CLOSE)
+
+    @staticmethod
+    def __binary_assignment_handler(node):
+        if isinstance(node.lvalue, c_ast.StructRef):
+            left_value = constants.STRUCT_VAR.format(node.lvalue.name.name, node.lvalue.type, node.lvalue.field.name)
+        else:
+            left_value = node.lvalue.name
+
+        if isinstance(node.rvalue.left, c_ast.StructRef):
+            left_r_value = constants.STRUCT_VAR.format(node.rvalue.left.name.name, node.rvalue.left.type,
+                                                       node.rvalue.left.field.name)
+        else:
+            left_r_value = node.rvalue.left.name
+
+        if isinstance(node.rvalue.right, c_ast.StructRef):
+            right_r_value = constants.STRUCT_VAR.format(node.rvalue.left.name.name, node.rvalue.left.type,
+                                                        node.rvalue.left.field.name)
+        else:
+            right_r_value = node.rvalue.right.name
+
+        return left_value, left_r_value, right_r_value
+
+    @staticmethod
+    def __unary_assignment_handler(node):
+        is_ptr = False
+        if isinstance(node.lvalue, c_ast.StructRef):
+            is_ptr = True
+            left_value = constants.STRUCT_VAR.format(node.lvalue.name.name, node.lvalue.type, node.lvalue.field.name)
+        elif isinstance(node.lvalue, c_ast.UnaryOp):
+            is_ptr = True
+            left_value = node.lvalue.op + node.lvalue.expr.name
+        else:
+            left_value = node.lvalue.name
+
+        if isinstance(node.rvalue, c_ast.StructRef):
+            is_ptr = True
+            right_value = constants.STRUCT_VAR.format(node.rvalue.name.name, node.rvalue.type, node.rvalue.field.name)
+        elif isinstance(node.rvalue, c_ast.Constant):
+            right_value = node.rvalue.value
+        elif isinstance(node.rvalue, c_ast.UnaryOp):
+            right_value = node.rvalue.op + node.rvalue.expr.name
+        else:
+            right_value = node.rvalue.name
+
+        return left_value, right_value, is_ptr
+
+    @staticmethod
+    def __unary_operation_handler(node):
+        if isinstance(node.cond.left, c_ast.UnaryOp):
+            left_cond = node.cond.left.op + node.cond.left.expr.name
+            right_cond = node.cond.right.name
+        elif isinstance(node.cond.right, c_ast.UnaryOp):
+            left_cond = node.cond.left.name
+            right_cond = node.cond.right.op + node.cond.right.expr.name
+        elif isinstance(node.cond.right, c_ast.Constant):
+            left_cond = node.cond.left.name
+            right_cond = node.cond.right.value
+        else:
+            left_cond = node.cond.left.name
+            right_cond = node.cond.right.name
+
+        return left_cond, right_cond
