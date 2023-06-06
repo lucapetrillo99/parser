@@ -39,6 +39,8 @@ class FileConstructor:
                 else:
                     if isinstance(v.lvalue, c_ast.StructRef):
                         l_value = constants.STRUCT_VAR.format(v.lvalue.name.name, v.lvalue.type, v.lvalue.field.name)
+                    elif isinstance(v.lvalue, c_ast.UnaryOp):
+                        l_value = v.lvalue.op + v.lvalue.expr.name
                     else:
                         l_value = v.lvalue.name
 
@@ -46,6 +48,8 @@ class FileConstructor:
                         r_value = constants.STRUCT_VAR.format(v.rvalue.name.name, v.rvalue.type, v.rvalue.field.name)
                     elif isinstance(v.rvalue, c_ast.Constant):
                         r_value = v.rvalue.value
+                    elif isinstance(v.rvalue, c_ast.UnaryOp):
+                        r_value = v.rvalue.op + v.rvalue.expr.name
                     else:
                         r_value = v.rvalue.name
 
@@ -73,12 +77,20 @@ class FileConstructor:
                 self.successors[succ] = self.visitor.constructs[k]
 
             elif isinstance(v, c_ast.If):
-                if isinstance(v.cond.right, c_ast.Constant):
-                    right = v.cond.right.value
+                if isinstance(v.cond.left, c_ast.UnaryOp):
+                    v_cond_left = v.cond.left.op + v.cond.left.expr.name
+                    v_cond_right = v.cond.right.name
+                elif isinstance(v.cond.right, c_ast.UnaryOp):
+                    v_cond_left = v.cond.left.name
+                    v_cond_right = v.cond.right.op + v.cond.right.expr.name
+                elif isinstance(v.cond.right, c_ast.Constant):
+                    v_cond_left = v.cond.left.name
+                    v_cond_right = v.cond.right.value
                 else:
-                    right = v.cond.right.name
+                    v_cond_left = v.cond.left.name
+                    v_cond_right = v.cond.right.name
 
-                self.instructions[listing] = {"cond": constants.EXPRESSION.format(v.cond.left.name, v.cond.op, right),
+                self.instructions[listing] = {"cond": constants.EXPRESSION.format(v_cond_left, v.cond.op, v_cond_right),
                                               "op": constants.IF_COND}
                 succ = constants.SUCCESSOR.format(k)
                 self.successors[succ] = self.visitor.constructs[k]

@@ -3,18 +3,15 @@ TREE_DECL = "treeDecl = function.VarDecl(\"fld-\", nVars={}, nPtrs={})"
 PTR_DECL = "treeDecl.getPtr(\"{}\")"
 VAR_DECL = "treeDecl.getVar(\"{}\", {})"
 
-INT = "z3.IntSort()"
-REAL = "z3.RealSort()"
-BOOL = "z3.BoolSort()"
+INT = "z3.IntSort"
+REAL = "z3.RealSort"
+BOOL = "z3.BoolSort"
 
 # functions variables
 FUNCTION = "funDecl = function.VarDecl(\"var-\", nVars={}, nPtrs={})"
 FUNCTION_CLOSE = "F = function.Function(funDecl, listing, succ)"
 GET_VAR = "funDecl.getVar(\"{}\", {})"
 GET_PTR = "funDecl.getPtr(\"{}\")"
-GET_INT = "z3.IntSort"
-GET_REAL = "z3.RealSort"
-GET_BOOL = "z3.BoolSort"
 
 # functions instructions
 EXPRESSION = "{} {} {}"
