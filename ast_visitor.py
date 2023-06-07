@@ -4,106 +4,127 @@ from pycparser import c_ast
 
 class AstVisitor(c_ast.NodeVisitor):
     def __init__(self, return_line):
-        self.in_function = False
-        self.var_dict = {}
-        self.PtrFieldSort = []
-        self.statement_dict = {}
-        self.line_number = 0
-        self.constructs = {}
-        self.function_dict = {}
-        self.ptr_var = []
-        self.function_ptr = []
-        self.vars = []
-        self.if_line = {}
-        self.return_line = return_line
+        self.__in_function = False
+        self.__line_number = 0
+        self.__variables_info = {}
+        self.__pointers_info = []
+        self.__stmts_bindings = {}
+        self.__constructs_info = {}
+        self.__function_pointers = {}
+        self.__function_variables = {}
+        self.__then_successors = {}
+        self.__return_line = return_line
 
     def visit_Decl(self, node):
-        if not self.in_function:
+        if not self.__in_function:
             if isinstance(node.type, c_ast.PtrDecl):
-                self.PtrFieldSort.append(node.name)
+                self.__pointers_info.append(node.name)
             elif isinstance(node.type, c_ast.TypeDecl):
                 node_type = node.type.type.names[0]
                 if node_type == 'int':
-                    self.var_dict[node.name] = constants.INT
+                    self.__variables_info[node.name] = constants.INT
                 if node_type == 'double':
-                    self.var_dict[node.name] = constants.REAL
+                    self.__variables_info[node.name] = constants.REAL
                 if node_type == 'bool':
-                    self.var_dict[node.name] = constants.BOOL
+                    self.__variables_info[node.name] = constants.BOOL
             elif isinstance(node.type, c_ast.Struct):
                 declarations = node.type.decls
                 for decl in declarations:
                     if isinstance(decl.type, c_ast.PtrDecl):
-                        self.PtrFieldSort.append(decl.name)
+                        self.__pointers_info.append(decl.name)
                     elif isinstance(decl.type, c_ast.TypeDecl):
                         node_type = decl.type.type.names[0]
                         if node_type == 'int':
-                            self.var_dict[decl.name] = constants.INT
+                            self.__variables_info[decl.name] = constants.INT
                         if node_type == 'double':
-                            self.var_dict[decl.name] = constants.REAL
+                            self.__variables_info[decl.name] = constants.REAL
                         if node_type == 'bool':
-                            self.var_dict[decl.name] = constants.BOOL
+                            self.__variables_info[decl.name] = constants.BOOL
 
     def visit_FuncDef(self, node):
         for decl in node.decl.type.args.params:
             if isinstance(decl.type, c_ast.PtrDecl):
-                self.ptr_var.append(decl.name)
+                self.__function_pointers[decl.name] = "param"
 
-        self.in_function = True
+        self.__in_function = True
         self.generic_visit(node.body)
-        self.in_function = False
+        self.__in_function = False
 
     def generic_visit(self, node):
         if isinstance(node, c_ast.Compound):
             for stmt in node.block_items:
                 if isinstance(stmt, c_ast.Decl):
                     if isinstance(stmt.type, c_ast.PtrDecl):
-                        self.ptr_var.append(stmt.name)
-                        self.function_ptr.append(stmt.name)
-                        self.function_dict[stmt.name] = constants.GET_PTR.format(stmt.name)
+                        self.__function_pointers[stmt.name] = "function"
                     else:
-                        self.vars.append(stmt.name)
                         node_type = stmt.type.type.names[0]
                         if node_type == 'int':
-                            self.function_dict[stmt.type.declname] = constants.GET_VAR.format(stmt.type.declname,
-                                                                                              constants.INT)
+                            self.__function_variables[stmt.name] = constants.INT
                         if node_type == 'double':
-                            self.function_dict[stmt.type.declname] = constants.GET_VAR.format(stmt.type.declname,
-                                                                                              constants.REAL)
+                            self.__function_variables[stmt.name] = constants.REAL
                         if node_type == 'bool':
-                            self.function_dict[stmt.type.declname] = constants.GET_VAR.format(stmt.type.declname,
-                                                                                              constants.BOOL)
+                            self.__function_variables[stmt.name] = constants.BOOL
                 else:
                     if isinstance(stmt, c_ast.Return):
-                        if stmt.coord.line != self.return_line:
-                            self.statement_dict[self.line_number] = stmt
-                            self.constructs[self.line_number] = constants.SKIP
-                            self.line_number += 1
+                        if stmt.coord.line != self.__return_line:
+                            self.__stmts_bindings[self.__line_number] = stmt
+                            self.__constructs_info[self.__line_number] = constants.SKIP
+                            self.__line_number += 1
                         else:
-                            self.statement_dict[self.line_number] = stmt
-                            self.line_number += 1
+                            self.__stmts_bindings[self.__line_number] = stmt
+                            self.__line_number += 1
                     else:
-                        self.statement_dict[self.line_number] = stmt
-                        self.line_number += 1
+                        self.__stmts_bindings[self.__line_number] = stmt
+                        self.__line_number += 1
 
                 self.visit(stmt)
 
         elif isinstance(node, c_ast.If):
-            curr_line_number = self.line_number
-            self.constructs[curr_line_number - 1] = self.line_number
+            curr_line_number = self.__line_number
+            self.__constructs_info[curr_line_number - 1] = self.__line_number
             self.visit(node.iftrue)
-            last_if_true = self.line_number - 1
+            last_if_true = self.__line_number - 1
             if node.iffalse:
-                self.constructs[curr_line_number - 1] = (self.constructs[curr_line_number - 1], self.line_number)
+                self.__constructs_info[curr_line_number - 1] = (
+                    self.__constructs_info[curr_line_number - 1], self.__line_number)
                 self.visit(node.iffalse)
-                self.if_line[last_if_true] = self.line_number
+                self.__then_successors[last_if_true] = self.__line_number
 
         elif isinstance(node, c_ast.While):
-            curr_line_number = self.line_number
+            curr_line_number = self.__line_number
             self.visit(node.stmt)
-            self.constructs[curr_line_number - 1] = (curr_line_number, self.line_number)
+            self.__constructs_info[curr_line_number - 1] = (curr_line_number, self.__line_number)
         elif isinstance(node, c_ast.For):
-            curr_line_number = self.line_number
+            curr_line_number = self.__line_number
             self.visit(node.stmt)
-            self.constructs[curr_line_number - 1] = (curr_line_number, self.line_number)
+            self.__constructs_info[curr_line_number - 1] = (curr_line_number, self.__line_number)
         else:
             super().generic_visit(node)
+
+    @property
+    def variables_info(self):
+        return self.__variables_info
+
+    @property
+    def pointers_info(self):
+        return self.__pointers_info
+
+    @property
+    def stmts_bindings(self):
+        return self.__stmts_bindings
+
+    @property
+    def constructs_info(self):
+        return self.__constructs_info
+
+    @property
+    def function_pointers(self):
+        return self.__function_pointers
+
+    @property
+    def function_variables(self):
+        return self.__function_variables
+
+    @property
+    def then_successors(self):
+        return self.__then_successors

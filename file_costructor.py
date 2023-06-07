@@ -10,7 +10,7 @@ class FileConstructor:
         self.successors = {}
 
     def build_file(self):
-        for line, instruction in self.visitor.statement_dict.items():
+        for line, instruction in self.visitor.stmts_bindings.items():
             listing = constants.LISTING.format(line)
             if isinstance(instruction, c_ast.Assignment):
                 if isinstance(instruction.rvalue, c_ast.BinaryOp):
@@ -21,22 +21,22 @@ class FileConstructor:
                         "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
 
                     succ = constants.SUCCESSOR.format(line)
-                    if line in list(self.visitor.if_line.keys()):
-                        self.successors[succ] = self.visitor.if_line[line]
+                    if line in list(self.visitor.then_successors.keys()):
+                        self.successors[succ] = self.visitor.then_successors[line]
                     else:
                         self.successors[succ] = line + 1
 
                 else:
                     l_value, r_value, is_ptr = self.__unary_assignment_handler(instruction)
-                    if l_value in self.visitor.ptr_var or is_ptr:
+                    if l_value in self.visitor.function_pointers or is_ptr:
                         self.instructions[listing] = constants.PTR_ASSIGN.format(l_value, r_value)
                     else:
                         self.instructions[listing] = {"exp": r_value,
                                                       "op": constants.BIN_EXPR_ASSIGN.format(l_value)}
 
                     succ = constants.SUCCESSOR.format(line)
-                    if line in list(self.visitor.if_line.keys()):
-                        self.successors[succ] = self.visitor.if_line[line]
+                    if line in list(self.visitor.then_successors.keys()):
+                        self.successors[succ] = self.visitor.then_successors[line]
                     else:
                         self.successors[succ] = line + 1
 
@@ -51,7 +51,7 @@ class FileConstructor:
                                                   "op": constants.WHILE_COND}
 
                 succ = constants.SUCCESSOR.format(line)
-                self.successors[succ] = self.visitor.constructs[line]
+                self.successors[succ] = self.visitor.constructs_info[line]
 
             elif isinstance(instruction, c_ast.If):
                 left_cond, right_cond = self.__unary_operation_handler(instruction)
@@ -59,7 +59,7 @@ class FileConstructor:
                     "cond": constants.EXPRESSION.format(left_cond, instruction.cond.op, right_cond),
                     "op": constants.IF_COND}
                 succ = constants.SUCCESSOR.format(line)
-                self.successors[succ] = self.visitor.constructs[line]
+                self.successors[succ] = self.visitor.constructs_info[line]
 
             elif isinstance(instruction, c_ast.UnaryOp):
                 if isinstance(instruction.expr, c_ast.StructRef):
@@ -77,16 +77,16 @@ class FileConstructor:
                         "op": constants.BIN_EXPR_ASSIGN.format(variable_name)}
 
                 succ = constants.SUCCESSOR.format(line)
-                if line in list(self.visitor.if_line.keys()):
-                    self.successors[succ] = self.visitor.if_line[line]
+                if line in list(self.visitor.then_successors.keys()):
+                    self.successors[succ] = self.visitor.then_successors[line]
                 else:
                     self.successors[succ] = line + 1
 
             elif isinstance(instruction, c_ast.Return):
                 try:
-                    self.instructions[listing] = self.visitor.constructs[line]
+                    self.instructions[listing] = self.visitor.constructs_info[line]
                     succ = constants.SUCCESSOR.format(line)
-                    self.successors[succ] = list(self.visitor.statement_dict)[-1]
+                    self.successors[succ] = list(self.visitor.stmts_bindings)[-1]
 
                 except KeyError:
                     self.instructions[listing] = constants.EXIT_COND
@@ -98,19 +98,26 @@ class FileConstructor:
         split_file = filename.split(".")[0].split("/")
         f = split_file[len(split_file) - 1] + ".py"
         with open(os.path.join("out/", f), "w") as file:
-            file.write("%s\n" % constants.TREE_DECL.format(len(self.visitor.var_dict), len(self.visitor.PtrFieldSort)))
+            file.write(
+                "%s\n" % constants.TREE_DECL.format(len(self.visitor.variables_info), len(self.visitor.pointers_info)))
 
-            for ptr in self.visitor.PtrFieldSort:
+            for ptr in self.visitor.pointers_info:
                 file.write("%s = %s\n" % (ptr, constants.PTR_DECL.format(ptr)))
 
-            for name, var_type in self.visitor.var_dict.items():
+            for name, var_type in self.visitor.variables_info.items():
                 file.write("%s = %s\n" % (name, constants.VAR_DECL.format(name, var_type)))
 
             file.write("\n")
-            file.write("%s\n" % constants.FUNCTION.format(len(self.visitor.vars), len(self.visitor.function_ptr)))
+            file.write("%s\n" % constants.FUNCTION.format(len(self.visitor.function_variables),
+                                                          sum(1 for v in self.visitor.function_pointers.values()
+                                                              if v == 'function')))
 
-            for k, v in self.visitor.function_dict.items():
-                file.write('%s = %s\n' % (k, v))
+            for name, value in self.visitor.function_pointers.items():
+                if value == 'function':
+                    file.write("%s = %s\n" % (name, constants.GET_PTR.format(name)))
+
+            for name, var_type in self.visitor.function_variables.items():
+                file.write("%s = %s\n" % (name, constants.GET_VAR.format(name, var_type)))
 
             file.write('\n')
             for k, v in zip(self.instructions.items(), self.successors.items()):
