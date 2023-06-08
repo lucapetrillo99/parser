@@ -1,5 +1,6 @@
 import constants
 from pycparser import c_ast
+import statements
 
 
 class AstVisitor(c_ast.NodeVisitor):
@@ -68,7 +69,7 @@ class AstVisitor(c_ast.NodeVisitor):
                     if isinstance(stmt, c_ast.Return):
                         if stmt.coord.line != self.__return_line:
                             self.__stmts_bindings[self.__line_number] = stmt
-                            self.__constructs_info[self.__line_number] = constants.SKIP
+                            self.__constructs_info[self.__line_number] = statements.Skip()
                             self.__line_number += 1
                         else:
                             self.__stmts_bindings[self.__line_number] = stmt
