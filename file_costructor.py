@@ -32,15 +32,17 @@ class FileConstructor:
                     self.succ.append(line + 1)
 
             elif isinstance(instruction, c_ast.While):
-                # TODO case of !p -> check on UnaryOp and case p -> other case
-
-                if instruction.cond.op == "==":
-                    cond = heap_cond.Eq(self.fun_vars[instruction.cond.left.name],
-                                        self.fun_vars[instruction.cond.right.name])
-                elif instruction.cond.op == "!=":
-                    cond = heap_cond.Neq(self.fun_vars[instruction.cond.left.name],
-                                         self.fun_vars[instruction.cond.right.name])
-
+                if isinstance(instruction.cond, c_ast.ID):
+                    cond = heap_cond.EqNil(self.fun_vars[instruction.cond.name])
+                elif isinstance(instruction.cond, c_ast.UnaryOp):
+                    cond = heap_cond.NeqNil(self.fun_vars[instruction.cond.expr.name])
+                else:
+                    if instruction.cond.op == "==":
+                        cond = heap_cond.Eq(self.fun_vars[instruction.cond.left.name],
+                                            self.fun_vars[instruction.cond.right.name])
+                    elif instruction.cond.op == "!=":
+                        cond = heap_cond.Neq(self.fun_vars[instruction.cond.left.name],
+                                             self.fun_vars[instruction.cond.right.name])
                 self.inst.append(statements.While(cond))
                 self.succ.append(self.visitor.constructs_info[line])
 
