@@ -19,9 +19,9 @@ class FileConstructor:
         for line, instruction in self.visitor.stmts_bindings.items():
             if isinstance(instruction, c_ast.Assignment):
                 if isinstance(instruction.rvalue, c_ast.BinaryOp):
-                    l_value, left_r_value, right_r_value = self.__binary_assignment_handler(instruction)
-                    exp = constants.EXPRESSION.format(left_r_value, instruction.rvalue.op, right_r_value)
-                    self.inst.append(statements.ExpAssign(l_value, exp))
+                    exp = constants.EXPRESSION.format(instruction.rvalue.left.name, instruction.rvalue.op,
+                                                      instruction.rvalue.right.name)
+                    self.inst.append(statements.ExpAssign(instruction.lvalue.name, exp))
                 else:
                     statement = self.__unary_assignment_handler(instruction)
                     self.inst.append(statement)
@@ -100,33 +100,6 @@ class FileConstructor:
 
         return fun_decl
 
-    @staticmethod
-    def __binary_assignment_handler(node):
-        if isinstance(node.lvalue, c_ast.StructRef):
-            """ case of pointer assignment like: p->data = b + c """
-            left_value = constants.STRUCT_VAR.format(node.lvalue.name.name, node.lvalue.type, node.lvalue.field.name)
-        else:
-            """ case of assignment like: p = * """
-            left_value = node.lvalue.name
-
-        if isinstance(node.rvalue.left, c_ast.StructRef):
-            """ case of assignment like: a = p->data + c """
-            left_r_value = constants.STRUCT_VAR.format(node.rvalue.left.name.name, node.rvalue.left.type,
-                                                       node.rvalue.left.field.name)
-        else:
-            left_r_value = node.rvalue.left.name
-
-        if isinstance(node.rvalue.right, c_ast.StructRef):
-            """ case of pointer assignment like: a = c + p->data """
-            right_r_value = constants.STRUCT_VAR.format(node.rvalue.right.name.name, node.rvalue.right.type,
-                                                        node.rvalue.right.field.name)
-        elif isinstance(node.rvalue.right, c_ast.Constant):
-            right_r_value = node.rvalue.right.value
-        else:
-            right_r_value = node.rvalue.right.name
-
-        return left_value, left_r_value, right_r_value
-
     def __unary_assignment_handler(self, node):
         is_left_ptr = False
         is_left_field = False
@@ -196,7 +169,7 @@ class FileConstructor:
 
     def __unary_operation_handler(self, node):
         # TODO case of !p -> check on UnaryOp and case p -> other case
-        
+
         if isinstance(node.cond.left, c_ast.UnaryOp):
             left_cond = self.fun_vars[node.cond.left.expr.name]
             right_cond = self.fun_vars[node.cond.right.name]
