@@ -1,6 +1,7 @@
 import constants
 from pycparser import c_ast
 import statements
+import z3
 
 
 class AstVisitor(c_ast.NodeVisitor):
@@ -11,7 +12,7 @@ class AstVisitor(c_ast.NodeVisitor):
         self.__pointers_info = []
         self.__stmts_bindings = {}
         self.__constructs_info = {}
-        self.__function_pointers = {}
+        self.__function_pointers = []
         self.__function_variables = {}
         self.__then_successors = {}
         self.__return_line = return_line
@@ -23,11 +24,11 @@ class AstVisitor(c_ast.NodeVisitor):
             elif isinstance(node.type, c_ast.TypeDecl):
                 node_type = node.type.type.names[0]
                 if node_type == 'int':
-                    self.__variables_info[node.name] = constants.INT
+                    self.__variables_info[node.name] = z3.IntSort()
                 if node_type == 'double':
-                    self.__variables_info[node.name] = constants.REAL
+                    self.__variables_info[node.name] = z3.RealSort()
                 if node_type == 'bool':
-                    self.__variables_info[node.name] = constants.BOOL
+                    self.__variables_info[node.name] = z3.BoolSort()
             elif isinstance(node.type, c_ast.Struct):
                 declarations = node.type.decls
                 for decl in declarations:
@@ -36,16 +37,24 @@ class AstVisitor(c_ast.NodeVisitor):
                     elif isinstance(decl.type, c_ast.TypeDecl):
                         node_type = decl.type.type.names[0]
                         if node_type == 'int':
-                            self.__variables_info[decl.name] = constants.INT
+                            self.__variables_info[decl.name] = z3.IntSort()
                         if node_type == 'double':
-                            self.__variables_info[decl.name] = constants.REAL
+                            self.__variables_info[decl.name] = z3.RealSort()
                         if node_type == 'bool':
-                            self.__variables_info[decl.name] = constants.BOOL
+                            self.__variables_info[decl.name] = z3.BoolSort()
 
     def visit_FuncDef(self, node):
         for decl in node.decl.type.args.params:
             if isinstance(decl.type, c_ast.PtrDecl):
-                self.__function_pointers[decl.name] = "param"
+                self.__function_pointers.append(decl.name)
+            elif isinstance(decl.type, c_ast.TypeDecl):
+                node_type = decl.type.type.names[0]
+                if node_type == 'int':
+                    self.__function_variables[decl.name] = z3.IntSort()
+                if node_type == 'double':
+                    self.__function_variables[decl.name] = z3.RealSort()
+                if node_type == 'bool':
+                    self.__function_variables[decl.name] = z3.BoolSort()
 
         self.__in_function = True
         self.generic_visit(node.body)
@@ -56,15 +65,15 @@ class AstVisitor(c_ast.NodeVisitor):
             for stmt in node.block_items:
                 if isinstance(stmt, c_ast.Decl):
                     if isinstance(stmt.type, c_ast.PtrDecl):
-                        self.__function_pointers[stmt.name] = "function"
+                        self.__function_pointers.append(stmt.name)
                     else:
                         node_type = stmt.type.type.names[0]
                         if node_type == 'int':
-                            self.__function_variables[stmt.name] = constants.INT
+                            self.__function_variables[stmt.name] = z3.IntSort()
                         if node_type == 'double':
-                            self.__function_variables[stmt.name] = constants.REAL
+                            self.__function_variables[stmt.name] = z3.RealSort()
                         if node_type == 'bool':
-                            self.__function_variables[stmt.name] = constants.BOOL
+                            self.__function_variables[stmt.name] = z3.BoolSort()
                 else:
                     if isinstance(stmt, c_ast.Return):
                         if stmt.coord.line != self.__return_line:

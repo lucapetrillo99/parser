@@ -1,6 +1,6 @@
-import os
 import constants
 import statements
+import function
 from pycparser import c_ast
 
 
@@ -9,10 +9,13 @@ class FileConstructor:
         self.visitor = visitor
         self.inst = []
         self.succ = []
-        self.instructions = {}
-        self.successors = {}
+        self.fun_vars = {}
+        self.vars = {}
 
     def build_file(self):
+        fun_decl = self.write_file()
+        heap_cond = statements.makeCondSort(fun_decl.getPtrIdSort())
+
         for line, instruction in self.visitor.stmts_bindings.items():
             if isinstance(instruction, c_ast.Assignment):
                 if isinstance(instruction.rvalue, c_ast.BinaryOp):
@@ -28,18 +31,18 @@ class FileConstructor:
                 else:
                     self.succ.append(line + 1)
 
-            # elif isinstance(instruction, c_ast.While):
-            # if instruction.cond.op == "==":
-            #     self.instructions[listing] = {"cond": constants.EQ_HEAP_COND.format(instruction.cond.left.name,
-            #                                                                         instruction.cond.right.name),
-            #                                   "op": constants.WHILE_COND}
-            # else:
-            #     self.instructions[listing] = {"cond": constants.NEQ_HEAP_COND.format(instruction.cond.left.name,
-            #                                                                          instruction.cond.right.name),
-            #                                   "op": constants.WHILE_COND}
-            #
-            # succ = constants.SUCCESSOR.format(line)
-            # self.successors[succ] = self.visitor.constructs_info[line]
+            elif isinstance(instruction, c_ast.While):
+                # TODO case of !p -> check on UnaryOp and case p -> other case
+
+                if instruction.cond.op == "==":
+                    cond = heap_cond.Eq(self.fun_vars[instruction.cond.left.name],
+                                        self.fun_vars[instruction.cond.right.name])
+                elif instruction.cond.op == "!=":
+                    cond = heap_cond.Neq(self.fun_vars[instruction.cond.left.name],
+                                         self.fun_vars[instruction.cond.right.name])
+
+                self.inst.append(statements.While(cond))
+                self.succ.append(self.visitor.constructs_info[line])
 
             elif isinstance(instruction, c_ast.If):
                 left_cond, right_cond = self.__unary_operation_handler(instruction)
@@ -73,44 +76,27 @@ class FileConstructor:
                     self.inst.append(statements.Exit())
                     self.succ.append(None)
 
-    def write_file(self, filename):
-        os.makedirs(constants.OUT_DIR, exist_ok=True)
-        split_file = filename.split(".")[0].split("/")
-        f = split_file[len(split_file) - 1] + ".py"
-        with open(os.path.join("out/", f), "w") as file:
-            file.write(
-                "%s\n" % constants.TREE_DECL.format(len(self.visitor.variables_info), len(self.visitor.pointers_info)))
+    def write_file(self):
+        vars_number = len(self.visitor.variables_info)
+        ptrs_number = len(self.visitor.pointers_info)
+        tree_decl = function.VarDecl("fld_", nVars=vars_number, nPtrs=ptrs_number)
 
-            for ptr in self.visitor.pointers_info:
-                file.write("%s = %s\n" % (ptr, constants.PTR_DECL.format(ptr)))
+        for ptr in self.visitor.pointers_info:
+            self.vars[ptr] = tree_decl.getPtr()
 
-            for name, var_type in self.visitor.variables_info.items():
-                file.write("%s = %s\n" % (name, constants.VAR_DECL.format(name, var_type)))
+        for name, value in self.visitor.variables_info.items():
+            self.vars[name] = tree_decl.getVar(name, value)
 
-            file.write("\n")
-            file.write("%s\n" % constants.FUNCTION.format(len(self.visitor.function_variables),
-                                                          sum(1 for v in self.visitor.function_pointers.values()
-                                                              if v == 'function')))
+        fun_decl = function.VarDecl("var_", nVars=len(self.visitor.function_variables),
+                                    nPtrs=len(self.visitor.function_pointers))
 
-            for name, value in self.visitor.function_pointers.items():
-                if value == 'function':
-                    file.write("%s = %s\n" % (name, constants.GET_PTR.format(name)))
+        for ptr in self.visitor.function_pointers:
+            self.fun_vars[ptr] = fun_decl.getPtr()
 
-            for name, var_type in self.visitor.function_variables.items():
-                file.write("%s = %s\n" % (name, constants.GET_VAR.format(name, var_type)))
+        for name, value in self.visitor.function_variables.items():
+            self.fun_vars[name] = fun_decl.getVar(name, value)
 
-            file.write('\n')
-            for k, v in zip(self.instructions.items(), self.successors.items()):
-                if isinstance(k[1], str):
-                    file.write('%s = %s\n' % (k[0], k[1]))
-                    file.write('%s = %s\n' % (v[0], v[1]))
-                elif isinstance(k[1], dict):
-                    file.write('%s = %s\n' % (list(k[1].keys())[0], list(k[1].values())[0]))
-                    file.write('%s = %s\n' % (k[0], list(k[1].values())[1]))
-                    file.write('%s = %s\n' % (v[0], v[1]))
-
-            file.write("\n")
-            file.write(constants.FUNCTION_CLOSE)
+        return fun_decl
 
     @staticmethod
     def __binary_assignment_handler(node):
@@ -118,7 +104,7 @@ class FileConstructor:
             """ case of pointer assignment like: p->data = b + c """
             left_value = constants.STRUCT_VAR.format(node.lvalue.name.name, node.lvalue.type, node.lvalue.field.name)
         else:
-            """ case of assignment like: p = [everything] """
+            """ case of assignment like: p = * """
             left_value = node.lvalue.name
 
         if isinstance(node.rvalue.left, c_ast.StructRef):
@@ -150,23 +136,24 @@ class FileConstructor:
         if isinstance(node.lvalue, c_ast.StructRef):
             """ case of left value like: p->field = * """
             is_left_field = True
-            left_value = node.lvalue.name.name
-            field = node.lvalue.field.name
+            left_value = self.fun_vars[node.lvalue.name.name]
+            field = self.vars[node.lvalue.field.name]
         elif isinstance(node.lvalue, c_ast.UnaryOp):
             """ case of left value like: *root = * """
             is_left_ptr = True
-            left_value = node.lvalue.op + node.lvalue.expr.name
+            left_value = self.fun_vars[node.lvalue.expr.name]
         else:
             """ case of left value like: p = * """
             left_value = node.lvalue.name
             if left_value in self.visitor.function_pointers:
                 is_left_ptr = True
+            left_value = self.fun_vars[node.lvalue.name]
 
         if isinstance(node.rvalue, c_ast.StructRef):
             """ case of right value like: * = q->field """
             is_right_field = True
-            right_value = node.rvalue.name.name
-            field = node.rvalue.field.name
+            right_value = self.fun_vars[node.rvalue.name.name]
+            field = self.vars[node.rvalue.field.name]
         elif isinstance(node.rvalue, c_ast.Constant):
             """ case of assignment like: * = 1 """
             is_right_constant = True
@@ -174,12 +161,13 @@ class FileConstructor:
         elif isinstance(node.rvalue, c_ast.UnaryOp):
             """ case of pointer assignment like: * = *root """
             is_right_ptr = True
-            right_value = node.rvalue.op + node.rvalue.expr.name
+            right_value = self.fun_vars[node.rvalue.expr.name]
         else:
             """ case of pointer assignment like: * = q """
             right_value = node.rvalue.name
             if right_value in self.visitor.function_pointers:
                 is_right_ptr = True
+            right_value = self.fun_vars[node.rvalue.name]
 
         if is_left_ptr and is_right_ptr:
             """ case: p = q """
@@ -204,19 +192,20 @@ class FileConstructor:
 
         return statement
 
-    @staticmethod
-    def __unary_operation_handler(node):
+    def __unary_operation_handler(self, node):
+        # TODO case of !p -> check on UnaryOp and case p -> other case
+        
         if isinstance(node.cond.left, c_ast.UnaryOp):
-            left_cond = node.cond.left.op + node.cond.left.expr.name
-            right_cond = node.cond.right.name
+            left_cond = self.fun_vars[node.cond.left.expr.name]
+            right_cond = self.fun_vars[node.cond.right.name]
         elif isinstance(node.cond.right, c_ast.UnaryOp):
-            left_cond = node.cond.left.name
-            right_cond = node.cond.right.op + node.cond.right.expr.name
+            left_cond = self.fun_vars[node.cond.left.name]
+            right_cond = self.fun_vars[node.cond.right.expr.name]
         elif isinstance(node.cond.right, c_ast.Constant):
-            left_cond = node.cond.left.name
+            left_cond = self.fun_vars[node.cond.left.name]
             right_cond = node.cond.right.value
         else:
-            left_cond = node.cond.left.name
-            right_cond = node.cond.right.name
+            left_cond = self.fun_vars[node.cond.left.name]
+            right_cond = self.fun_vars[node.cond.right.name]
 
         return left_cond, right_cond
