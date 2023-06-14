@@ -19,9 +19,10 @@ class FileConstructor:
         for line, instruction in self.visitor.stmts_bindings.items():
             if isinstance(instruction, c_ast.Assignment):
                 if isinstance(instruction.rvalue, c_ast.BinaryOp):
-                    exp = constants.EXPRESSION.format(instruction.rvalue.left.name, instruction.rvalue.op,
-                                                      instruction.rvalue.right.name)
-                    self.inst.append(statements.ExpAssign(instruction.lvalue.name, exp))
+                    exp = constants.EXPRESSION.format(self.fun_vars[instruction.rvalue.left.name],
+                                                      instruction.rvalue.op,
+                                                      self.fun_vars[instruction.rvalue.right.name])
+                    self.inst.append(statements.ExpAssign(self.fun_vars[instruction.lvalue.name], exp))
                 else:
                     statement = self.__unary_assignment_handler(instruction)
                     self.inst.append(statement)
@@ -53,17 +54,12 @@ class FileConstructor:
                 self.succ.append(self.visitor.constructs_info[line])
 
             elif isinstance(instruction, c_ast.UnaryOp):
-                if isinstance(instruction.expr, c_ast.StructRef):
-                    variable_name = instruction.expr.name.name + instruction.expr.type + instruction.expr.field.name
-                else:
-                    variable_name = instruction.expr.name
-
                 if instruction.op == "p++":
-                    exp = constants.EXPRESSION.format(variable_name, "+", "1")
+                    exp = constants.EXPRESSION.format(self.fun_vars[instruction.expr.name], "+", "1")
                 else:
-                    exp = constants.EXPRESSION.format(variable_name, "-", "1")
+                    exp = constants.EXPRESSION.format(self.fun_vars[instruction.expr.name], "-", "1")
 
-                self.inst.append(statements.ExpAssign(variable_name, exp))
+                self.inst.append(statements.ExpAssign(self.fun_vars[instruction.expr.name], exp))
 
                 if line in list(self.visitor.then_successors.keys()):
                     self.succ.append(self.visitor.then_successors[line])
