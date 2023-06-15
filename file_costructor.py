@@ -13,7 +13,7 @@ class FileConstructor:
         self.vars = {}
 
     def build_file(self):
-        fun_decl = self.write_file()
+        fun_decl, tree_decl = self.write_file()
         heap_cond = statements.makeCondSort(fun_decl.getPtrIdSort())
 
         for line, instruction in self.visitor.stmts_bindings.items():
@@ -74,6 +74,10 @@ class FileConstructor:
                     self.inst.append(statements.Exit())
                     self.succ.append(None)
 
+        fun = function.Function(fun_decl, self.inst, self.succ)
+
+        return tree_decl, fun
+
     def write_file(self):
         vars_number = len(self.visitor.variables_info)
         ptrs_number = len(self.visitor.pointers_info)
@@ -94,7 +98,7 @@ class FileConstructor:
         for name, value in self.visitor.function_variables.items():
             self.fun_vars[name] = fun_decl.getVar(name, value)
 
-        return fun_decl
+        return fun_decl, tree_decl
 
     def __unary_assignment_handler(self, node):
         is_left_ptr = False
