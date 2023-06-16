@@ -1,4 +1,3 @@
-import constants
 import statements
 import function
 from pycparser import c_ast
@@ -19,9 +18,8 @@ class FileConstructor:
         for line, instruction in self.visitor.stmts_bindings.items():
             if isinstance(instruction, c_ast.Assignment):
                 if isinstance(instruction.rvalue, c_ast.BinaryOp):
-                    exp = constants.EXPRESSION.format(self.fun_vars[instruction.rvalue.left.name],
-                                                      instruction.rvalue.op,
-                                                      self.fun_vars[instruction.rvalue.right.name])
+                    exp = "{} {} {}".format(self.fun_vars[instruction.rvalue.left.name], instruction.rvalue.op,
+                                            self.fun_vars[instruction.rvalue.right.name])
                     self.inst.append(statements.ExpAssign(self.fun_vars[instruction.lvalue.name], exp))
                 else:
                     statement = self.__unary_assignment_handler(instruction)
@@ -37,7 +35,7 @@ class FileConstructor:
                     cond = heap_cond.EqNil(self.fun_vars[instruction.cond.name])
                 elif isinstance(instruction.cond, c_ast.UnaryOp):
                     cond = heap_cond.NeqNil(self.fun_vars[instruction.cond.expr.name])
-                else:
+                elif isinstance(instruction.cond, c_ast.BinaryOp):
                     if instruction.cond.op == "==":
                         cond = heap_cond.Eq(self.fun_vars[instruction.cond.left.name],
                                             self.fun_vars[instruction.cond.right.name])
@@ -49,15 +47,15 @@ class FileConstructor:
 
             elif isinstance(instruction, c_ast.If):
                 left_cond, right_cond = self.__unary_operation_handler(instruction)
-                cond = constants.EXPRESSION.format(left_cond, instruction.cond.op, right_cond)
+                cond = "{} {} {}".format(left_cond, instruction.cond.op, right_cond)
                 self.inst.append(statements.If(cond))
                 self.succ.append(self.visitor.constructs_info[line])
 
             elif isinstance(instruction, c_ast.UnaryOp):
                 if instruction.op == "p++":
-                    exp = constants.EXPRESSION.format(self.fun_vars[instruction.expr.name], "+", "1")
+                    exp = "%s %s %d" % (self.fun_vars[instruction.expr.name], "+", 1)
                 else:
-                    exp = constants.EXPRESSION.format(self.fun_vars[instruction.expr.name], "-", "1")
+                    exp = "%s %s %d" % (self.fun_vars[instruction.expr.name], "-", 1)
 
                 self.inst.append(statements.ExpAssign(self.fun_vars[instruction.expr.name], exp))
 
