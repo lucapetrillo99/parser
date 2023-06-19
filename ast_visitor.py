@@ -1,4 +1,3 @@
-import constants
 from pycparser import c_ast
 import statements
 import z3
@@ -74,6 +73,8 @@ class AstVisitor(c_ast.NodeVisitor):
                             self.__function_variables[stmt.name] = z3.RealSort()
                         if node_type == 'bool':
                             self.__function_variables[stmt.name] = z3.BoolSort()
+                elif isinstance(stmt, c_ast.EmptyStatement):
+                    pass
                 else:
                     if isinstance(stmt, c_ast.Return):
                         if stmt.coord.line != self.__return_line:
@@ -108,6 +109,8 @@ class AstVisitor(c_ast.NodeVisitor):
             curr_line_number = self.__line_number
             self.visit(node.stmt)
             self.__constructs_info[curr_line_number - 1] = (curr_line_number, self.__line_number)
+        elif isinstance(node, c_ast.EmptyStatement):
+            pass
         else:
             super().generic_visit(node)
 
