@@ -1,4 +1,5 @@
 import statements
+import conditions
 import function
 from pycparser import c_ast
 
@@ -18,9 +19,18 @@ class FileConstructor:
         for line, instruction in self.visitor.stmts_bindings.items():
             if isinstance(instruction, c_ast.Assignment):
                 if isinstance(instruction.rvalue, c_ast.BinaryOp):
-                    exp = "{} {} {}".format(self.fun_vars[instruction.rvalue.left.name], instruction.rvalue.op,
-                                            self.fun_vars[instruction.rvalue.right.name])
-                    self.inst.append(statements.ExpAssign(self.fun_vars[instruction.lvalue.name], exp))
+                    if instruction.rvalue.op == "==":
+                        self.inst.append(statements.HeapCondAssign(self.fun_vars[instruction.lvalue.name],
+                                                                   conditions.EqNil(
+                                                                       self.fun_vars[instruction.rvalue.left.name])))
+                    elif instruction.rvalue.op == "!=":
+                        self.inst.append(statements.HeapCondAssign(self.fun_vars[instruction.lvalue.name],
+                                                                   conditions.NeqNil(
+                                                                       self.fun_vars[instruction.rvalue.left.name])))
+                    else:
+                        exp = "{} {} {}".format(self.fun_vars[instruction.rvalue.left.name], instruction.rvalue.op,
+                                                self.fun_vars[instruction.rvalue.right.name])
+                        self.inst.append(statements.ExpAssign(self.fun_vars[instruction.lvalue.name], exp))
                 else:
                     statement = self.__unary_assignment_handler(instruction)
                     self.inst.append(statement)
@@ -32,6 +42,7 @@ class FileConstructor:
 
             elif isinstance(instruction, c_ast.While):
                 if isinstance(instruction.cond, c_ast.ID):
+                    # TODO handle conditions in case of booleans
                     cond = heap_cond.EqNil(self.fun_vars[instruction.cond.name])
                 elif isinstance(instruction.cond, c_ast.UnaryOp):
                     cond = heap_cond.NeqNil(self.fun_vars[instruction.cond.expr.name])
