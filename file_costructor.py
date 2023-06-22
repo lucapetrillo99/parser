@@ -5,8 +5,9 @@ from pycparser import c_ast
 
 
 class FileConstructor:
-    def __init__(self, visitor):
+    def __init__(self, fun_visitor, visitor):
         self.visitor = visitor
+        self.fun_visitor = fun_visitor
         self.inst = []
         self.succ = []
         self.fun_vars = {}
@@ -57,6 +58,7 @@ class FileConstructor:
                 self.succ.append(self.visitor.constructs_info[line])
 
             elif isinstance(instruction, c_ast.If):
+                # TODO case of !p -> check on UnaryOp and case p -> other case
                 left_cond, right_cond = self.__unary_operation_handler(instruction)
                 cond = "{} {} {}".format(left_cond, instruction.cond.op, right_cond)
                 self.inst.append(statements.If(cond))
@@ -88,14 +90,14 @@ class FileConstructor:
         return tree_decl, fun
 
     def write_file(self):
-        vars_number = len(self.visitor.variables_info)
-        ptrs_number = len(self.visitor.pointers_info)
+        vars_number = len(self.fun_visitor.variables_info)
+        ptrs_number = len(self.fun_visitor.pointers_info)
         tree_decl = function.VarDecl("fld_", nVars=vars_number, nPtrs=ptrs_number)
 
-        for ptr in self.visitor.pointers_info:
+        for ptr in self.fun_visitor.pointers_info:
             self.vars[ptr] = tree_decl.getPtr()
 
-        for name, value in self.visitor.variables_info.items():
+        for name, value in self.fun_visitor.variables_info.items():
             self.vars[name] = tree_decl.getVar(name, value)
 
         fun_decl = function.VarDecl("var_", nVars=len(self.visitor.function_variables),
@@ -177,8 +179,6 @@ class FileConstructor:
         return statement
 
     def __unary_operation_handler(self, node):
-        # TODO case of !p -> check on UnaryOp and case p -> other case
-
         if isinstance(node.cond.left, c_ast.UnaryOp):
             left_cond = self.fun_vars[node.cond.left.expr.name]
             right_cond = self.fun_vars[node.cond.right.name]
