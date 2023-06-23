@@ -5,9 +5,10 @@ from pycparser import c_ast
 
 
 class FileConstructor:
-    def __init__(self, fun_visitor, visitor):
+    def __init__(self, fun_visitor, visitor, fun_name):
         self.visitor = visitor
         self.fun_visitor = fun_visitor
+        self.fun_name = fun_name
         self.inst = []
         self.succ = []
         self.fun_vars = {}
@@ -85,7 +86,7 @@ class FileConstructor:
                     self.inst.append(statements.Exit())
                     self.succ.append(None)
 
-        fun = function.Function(fun_decl, self.inst, self.succ)
+        fun = function.Function(self.fun_name, fun_decl, self.inst, self.succ)
 
         return tree_decl, fun
 

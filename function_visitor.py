@@ -7,7 +7,7 @@ class FunctionVisitor(c_ast.NodeVisitor):
         self.__in_function = False
         self.__variables_info = {}
         self.__pointers_info = []
-        self.functions = []
+        self.functions = {}
 
     def visit_Decl(self, node):
         if not self.__in_function:
@@ -36,7 +36,7 @@ class FunctionVisitor(c_ast.NodeVisitor):
                             self.__variables_info[decl.name] = z3.BoolSort()
 
     def visit_FuncDef(self, node):
-        self.functions.append(node)
+        self.functions[node.decl.name] = node
         self.__in_function = True
         self.generic_visit(node.body)
         self.__in_function = False

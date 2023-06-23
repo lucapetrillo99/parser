@@ -31,9 +31,9 @@ if __name__ == "__main__":
     fun_vis = FunctionVisitor()
     fun_vis.visit(ast)
     F = []
-    for f in fun_vis.functions:
+    for f_name, body in fun_vis.functions.items():
         visitor = AstVisitor(last_return)
-        visitor.visit(f)
-        f_cons = FileConstructor(fun_vis, visitor)
+        visitor.visit(body)
+        f_cons = FileConstructor(fun_vis, visitor, f_name)
         tree_decl, fun = f_cons.build_file()
         F.append(fun)
