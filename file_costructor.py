@@ -43,18 +43,7 @@ class FileConstructor:
                     self.succ.append(line + 1)
 
             elif isinstance(instruction, c_ast.While):
-                if isinstance(instruction.cond, c_ast.ID):
-                    # TODO handle conditions in case of booleans
-                    cond = heap_cond.EqNil(self.fun_vars[instruction.cond.name])
-                elif isinstance(instruction.cond, c_ast.UnaryOp):
-                    cond = heap_cond.NeqNil(self.fun_vars[instruction.cond.expr.name])
-                elif isinstance(instruction.cond, c_ast.BinaryOp):
-                    if instruction.cond.op == "==":
-                        cond = heap_cond.Eq(self.fun_vars[instruction.cond.left.name],
-                                            self.fun_vars[instruction.cond.right.name])
-                    elif instruction.cond.op == "!=":
-                        cond = heap_cond.Neq(self.fun_vars[instruction.cond.left.name],
-                                             self.fun_vars[instruction.cond.right.name])
+                cond = self.__while_condition_handler(instruction, heap_cond)
                 self.inst.append(statements.While(cond))
                 self.succ.append(self.visitor.constructs_info[line])
 
@@ -194,3 +183,28 @@ class FileConstructor:
             right_cond = self.fun_vars[node.cond.right.name]
 
         return left_cond, right_cond
+
+    def __while_condition_handler(self, node, heap_cond):
+        cond = None
+        if isinstance(node.cond, c_ast.ID):
+            """ case: while(a) """
+            cond = self.fun_vars[node.cond.name]
+        elif isinstance(node.cond, c_ast.BinaryOp):
+            if isinstance(node.cond.right, c_ast.Constant):
+                cond = "{} {} {}".format(self.fun_vars[node.cond.left.name], node.cond.op,
+                                         node.cond.right.value)
+            elif node.cond.left.name in self.visitor.function_pointers or node.cond.right.name in \
+                    self.visitor.function_pointers:
+                if node.cond.op == "==":
+                    """ case: while(p == q) """
+                    cond = heap_cond.Eq(self.fun_vars[node.cond.left.name],
+                                        self.fun_vars[node.cond.right.name])
+                elif node.cond.op == "!=":
+                    """ case: while(p != q) """
+                    cond = heap_cond.Neq(self.fun_vars[node.cond.left.name],
+                                         self.fun_vars[node.cond.right.name])
+            else:
+                cond = "{} {} {}".format(self.fun_vars[node.cond.left.name], node.cond.op,
+                                         self.fun_vars[node.cond.right.name])
+
+        return cond
