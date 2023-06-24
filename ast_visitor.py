@@ -1,20 +1,28 @@
-from pycparser import c_ast
-import statements
 import z3
+import statements
+from pycparser import c_ast
 
 
 class AstVisitor(c_ast.NodeVisitor):
+    """
+    A custom implementation of the NodeVisitor class for analyzing the AST of the functions.
+    This class explores all nodes in the AST and labeled it with line number, and its respective instruction.
+
+    :param return_line: The line number of the last "return" in the analyzed code
+    """
     def __init__(self, return_line):
         self.__line_number = 0
-        self.__stmts_bindings = {}
-        self.__constructs_info = {}
+        self.__stmts_bindings = {}  # dictionary to keep track of lines of code and instructions
+        self.__constructs_info = {}  # dictionary to keep track of constructs successors (eg. if, while)
         self.__function_pointers = []
         self.__function_variables = {}
-        self.__then_successors = {}
+        self.__then_successors = {}  # dictionary to keep track of "then" successors
         self.__return_line = return_line
 
     def visit_FuncDef(self, node):
         if node.decl.type.args is not None:
+
+            # collects all parameters of the function
             for decl in node.decl.type.args.params:
                 if isinstance(decl.type, c_ast.PtrDecl):
                     self.__function_pointers.append(decl.name)
@@ -47,6 +55,9 @@ class AstVisitor(c_ast.NodeVisitor):
                     pass
                 else:
                     if isinstance(stmt, c_ast.Return):
+
+                        # handles the return statement based on its position in the code (whether it is in the body
+                        # of the function or as the last statement)
                         if stmt.coord.line != self.__return_line:
                             self.__stmts_bindings[self.__line_number] = stmt
                             self.__constructs_info[self.__line_number] = statements.Skip()
@@ -66,6 +77,9 @@ class AstVisitor(c_ast.NodeVisitor):
             self.visit(node.iftrue)
             last_if_true = self.__line_number - 1
             if node.iffalse:
+
+                # stores the line of the first instruction of the "then" body and the first line instruction of the
+                # else body
                 self.__constructs_info[curr_line_number - 1] = (
                     self.__constructs_info[curr_line_number - 1], self.__line_number)
                 self.visit(node.iffalse)
@@ -74,6 +88,9 @@ class AstVisitor(c_ast.NodeVisitor):
         elif isinstance(node, c_ast.While):
             curr_line_number = self.__line_number
             self.visit(node.stmt)
+
+            # stores the line of the first instruction where the while condition is true and the line of the first
+            # instruction where the while condition is false
             self.__constructs_info[curr_line_number - 1] = (curr_line_number, self.__line_number)
         elif isinstance(node, c_ast.For):
             curr_line_number = self.__line_number
