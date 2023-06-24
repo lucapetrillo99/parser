@@ -14,17 +14,18 @@ class AstVisitor(c_ast.NodeVisitor):
         self.__return_line = return_line
 
     def visit_FuncDef(self, node):
-        for decl in node.decl.type.args.params:
-            if isinstance(decl.type, c_ast.PtrDecl):
-                self.__function_pointers.append(decl.name)
-            elif isinstance(decl.type, c_ast.TypeDecl):
-                node_type = decl.type.type.names[0]
-                if node_type == 'int':
-                    self.__function_variables[decl.name] = z3.IntSort()
-                if node_type == 'double':
-                    self.__function_variables[decl.name] = z3.RealSort()
-                if node_type == 'bool':
-                    self.__function_variables[decl.name] = z3.BoolSort()
+        if node.decl.type.args is not None:
+            for decl in node.decl.type.args.params:
+                if isinstance(decl.type, c_ast.PtrDecl):
+                    self.__function_pointers.append(decl.name)
+                elif isinstance(decl.type, c_ast.TypeDecl):
+                    node_type = decl.type.type.names[0]
+                    if node_type == 'int':
+                        self.__function_variables[decl.name] = z3.IntSort()
+                    if node_type == 'double':
+                        self.__function_variables[decl.name] = z3.RealSort()
+                    if node_type == 'bool':
+                        self.__function_variables[decl.name] = z3.BoolSort()
 
         self.generic_visit(node.body)
 
