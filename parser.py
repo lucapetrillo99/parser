@@ -10,7 +10,7 @@ import statements
 sys.path.extend(['.', '..'])
 from ast_visitor import AstVisitor
 from function_visitor import FunctionVisitor
-from file_costructor import FileConstructor
+from statements_handler import StatementsHandler
 from pycparser import parse_file, c_generator, c_ast, c_parser
 
 if __name__ == "__main__":
@@ -32,6 +32,6 @@ if __name__ == "__main__":
     for i, (f_name, body) in enumerate(fun_vis.functions.items()):
         visitor = AstVisitor(fun_vis.return_line[i])
         visitor.visit(body)
-        f_cons = FileConstructor(fun_vis, visitor, f_name)
-        tree_decl, fun = f_cons.build_file()
+        f_cons = StatementsHandler(fun_vis, visitor, f_name)
+        tree_decl, fun = f_cons.build_statements()
         F.append(fun)
