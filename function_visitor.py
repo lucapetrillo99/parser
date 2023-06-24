@@ -3,6 +3,12 @@ from pycparser import c_ast
 
 
 class FunctionVisitor(c_ast.NodeVisitor):
+    """
+    A custom implementation of the NodeVisitor class to analyze all functions in the file.
+    This class explores all external declarations to functions. It also separates the body of each function with its
+    function name.
+    """
+
     def __init__(self):
         self.__in_function = False
         self.__variables_info = {}
@@ -12,8 +18,12 @@ class FunctionVisitor(c_ast.NodeVisitor):
 
     def visit_Decl(self, node):
         if not self.__in_function:
+
+            # visits all pointer declarations
             if isinstance(node.type, c_ast.PtrDecl):
                 self.__pointers_info.append(node.name)
+
+            # visits all variable declarations
             elif isinstance(node.type, c_ast.TypeDecl):
                 node_type = node.type.type.names[0]
                 if node_type == 'int':
@@ -22,6 +32,8 @@ class FunctionVisitor(c_ast.NodeVisitor):
                     self.__variables_info[node.name] = z3.RealSort()
                 if node_type == 'bool':
                     self.__variables_info[node.name] = z3.BoolSort()
+
+            # visits all struct declarations
             elif isinstance(node.type, c_ast.Struct):
                 declarations = node.type.decls
                 for decl in declarations:
