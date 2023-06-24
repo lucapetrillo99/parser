@@ -5,6 +5,21 @@ from pycparser import c_ast
 
 
 class StatementsHandler:
+    """
+    This class translates the instructions obtained from the class: `AstVisitor` into a list of instructions
+    transformed into z3-compatible types and a list of successors for each instruction.
+
+    Attributes:
+    ----------
+    fun_visitor: class: `FunctionVisitor`
+        instance of the class FunctionVisitor
+
+    visitor: class: `AstVisitor`
+        instance of the class AstVisitor
+
+    fun_name : str
+        the name of the function to be analyzed
+    """
     def __init__(self, fun_visitor, visitor, fun_name):
         self.__visitor = visitor
         self.__fun_visitor = fun_visitor
