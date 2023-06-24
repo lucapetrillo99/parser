@@ -21,11 +21,13 @@ class FileConstructor:
         for line, instruction in self.visitor.stmts_bindings.items():
             if isinstance(instruction, c_ast.Assignment):
                 if isinstance(instruction.rvalue, c_ast.BinaryOp):
+                    """  case: cond1 = (p == NULL) """
                     if instruction.rvalue.op == "==":
                         self.inst.append(statements.HeapCondAssign(self.fun_vars[instruction.lvalue.name],
                                                                    conditions.EqNil(
                                                                        self.fun_vars[instruction.rvalue.left.name])))
                     elif instruction.rvalue.op == "!=":
+                        """  case: cond1 = (p != NULL) """
                         self.inst.append(statements.HeapCondAssign(self.fun_vars[instruction.lvalue.name],
                                                                    conditions.NeqNil(
                                                                        self.fun_vars[instruction.rvalue.left.name])))
@@ -43,14 +45,12 @@ class FileConstructor:
                     self.succ.append(line + 1)
 
             elif isinstance(instruction, c_ast.While):
-                cond = self.__while_condition_handler(instruction, heap_cond)
+                cond = self.__conditions_handler(instruction, heap_cond)
                 self.inst.append(statements.While(cond))
                 self.succ.append(self.visitor.constructs_info[line])
 
             elif isinstance(instruction, c_ast.If):
-                # TODO case of !p -> check on UnaryOp and case p -> other case
-                left_cond, right_cond = self.__unary_operation_handler(instruction)
-                cond = "{} {} {}".format(left_cond, instruction.cond.op, right_cond)
+                cond = self.__conditions_handler(instruction, heap_cond)
                 self.inst.append(statements.If(cond))
                 self.succ.append(self.visitor.constructs_info[line])
 
@@ -168,26 +168,10 @@ class FileConstructor:
 
         return statement
 
-    def __unary_operation_handler(self, node):
-        if isinstance(node.cond.left, c_ast.UnaryOp):
-            left_cond = self.fun_vars[node.cond.left.expr.name]
-            right_cond = self.fun_vars[node.cond.right.name]
-        elif isinstance(node.cond.right, c_ast.UnaryOp):
-            left_cond = self.fun_vars[node.cond.left.name]
-            right_cond = self.fun_vars[node.cond.right.expr.name]
-        elif isinstance(node.cond.right, c_ast.Constant):
-            left_cond = self.fun_vars[node.cond.left.name]
-            right_cond = node.cond.right.value
-        else:
-            left_cond = self.fun_vars[node.cond.left.name]
-            right_cond = self.fun_vars[node.cond.right.name]
-
-        return left_cond, right_cond
-
-    def __while_condition_handler(self, node, heap_cond):
+    def __conditions_handler(self, node, heap_cond):
         cond = None
         if isinstance(node.cond, c_ast.ID):
-            """ case: while(a) """
+            """ case: cond(a) """
             cond = self.fun_vars[node.cond.name]
         elif isinstance(node.cond, c_ast.BinaryOp):
             if isinstance(node.cond.right, c_ast.Constant):
@@ -196,11 +180,11 @@ class FileConstructor:
             elif node.cond.left.name in self.visitor.function_pointers or node.cond.right.name in \
                     self.visitor.function_pointers:
                 if node.cond.op == "==":
-                    """ case: while(p == q) """
+                    """ case: cond(p == q) """
                     cond = heap_cond.Eq(self.fun_vars[node.cond.left.name],
                                         self.fun_vars[node.cond.right.name])
                 elif node.cond.op == "!=":
-                    """ case: while(p != q) """
+                    """ case: cond(p != q) """
                     cond = heap_cond.Neq(self.fun_vars[node.cond.left.name],
                                          self.fun_vars[node.cond.right.name])
             else:
