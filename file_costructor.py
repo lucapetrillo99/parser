@@ -173,21 +173,29 @@ class FileConstructor:
             """ case: cond(a) """
             cond = self.fun_vars[node.cond.name]
         elif isinstance(node.cond, c_ast.BinaryOp):
+            if isinstance(node.cond.left, c_ast.UnaryOp):
+                left = node.cond.left.expr.name
+            if isinstance(node.cond.right, c_ast.UnaryOp):
+                right = node.cond.right.expr.name
+            if isinstance(node.cond.left, c_ast.ID):
+                left = node.cond.left.name
+            if isinstance(node.cond.right, c_ast.ID):
+                right = node.cond.right.name
+
             if isinstance(node.cond.right, c_ast.Constant):
                 cond = "{} {} {}".format(self.fun_vars[node.cond.left.name], node.cond.op,
                                          node.cond.right.value)
-            elif node.cond.left.name in self.visitor.function_pointers or node.cond.right.name in \
-                    self.visitor.function_pointers:
+            elif left in self.visitor.function_pointers or right in self.visitor.function_pointers:
                 if node.cond.op == "==":
                     """ case: cond(p == q) """
-                    cond = conditions.Eq(self.fun_vars[node.cond.left.name],
-                                         self.fun_vars[node.cond.right.name])
+                    cond = conditions.Eq(self.fun_vars[left],
+                                         self.fun_vars[right])
                 elif node.cond.op == "!=":
                     """ case: cond(p != q) """
-                    cond = conditions.Neq(self.fun_vars[node.cond.left.name],
-                                          self.fun_vars[node.cond.right.name])
+                    cond = conditions.Neq(self.fun_vars[left],
+                                          self.fun_vars[right])
             else:
-                cond = "{} {} {}".format(self.fun_vars[node.cond.left.name], node.cond.op,
-                                         self.fun_vars[node.cond.right.name])
+                cond = "{} {} {}".format(self.fun_vars[left], node.cond.op,
+                                         self.fun_vars[right])
 
         return cond
