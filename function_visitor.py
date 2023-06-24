@@ -7,6 +7,7 @@ class FunctionVisitor(c_ast.NodeVisitor):
         self.__in_function = False
         self.__variables_info = {}
         self.__pointers_info = []
+        self.__return_line = []
         self.functions = {}
 
     def visit_Decl(self, node):
@@ -37,6 +38,11 @@ class FunctionVisitor(c_ast.NodeVisitor):
 
     def visit_FuncDef(self, node):
         self.functions[node.decl.name] = node
+
+        # for each function finds the last return statement
+        inst_num = len(node.body.block_items) - 1
+        return_line = node.body.block_items[inst_num].coord.line
+        self.__return_line.append(return_line)
         self.__in_function = True
         self.generic_visit(node.body)
         self.__in_function = False
@@ -48,3 +54,7 @@ class FunctionVisitor(c_ast.NodeVisitor):
     @property
     def pointers_info(self):
         return self.__pointers_info
+
+    @property
+    def return_line(self):
+        return self.__return_line
