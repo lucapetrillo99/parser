@@ -1,6 +1,7 @@
 from __future__ import print_function
 import argparse
 import sys
+import statements
 
 # from z3 import *
 
@@ -8,6 +9,7 @@ import sys
 # your site-packages/ with setup.py
 sys.path.extend(['.', '..'])
 from ast_visitor import AstVisitor
+from function_visitor import FunctionVisitor
 from file_costructor import FileConstructor
 from pycparser import parse_file, c_generator, c_ast, c_parser
 
@@ -24,18 +26,12 @@ if __name__ == "__main__":
                      cpp_args=r'-Iutils/fake_libc_include')
 
     # ast.show(showcoord=True)
-    inst_num = len(ast.ext) - 1
-    last_return = ast.ext[inst_num].body.block_items[len(ast.ext[inst_num].body.block_items) - 1].coord.line
-    visitor = AstVisitor(last_return)
-    visitor.visit(ast)
-    f_cons = FileConstructor(visitor)
-    f_cons.build_file()
-    f_cons.write_file(args.filename)
-    # print(instructions)
-    # print(successors)
-    # print(visitor.constructs)
-    # print(visitor.var_dict)
-    # print(visitor.PtrFieldSort)
-    # for k, v in visitor.statement_dict.items():
-    #     if isinstance(v, c_ast.Assignment):
-    #         print(v)
+    fun_vis = FunctionVisitor()
+    fun_vis.visit(ast)
+    F = []
+    for i, (f_name, body) in enumerate(fun_vis.functions.items()):
+        visitor = AstVisitor(fun_vis.return_line[i])
+        visitor.visit(body)
+        f_cons = FileConstructor(fun_vis, visitor, f_name)
+        tree_decl, fun = f_cons.build_file()
+        F.append(fun)
