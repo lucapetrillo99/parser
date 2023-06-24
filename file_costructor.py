@@ -16,7 +16,6 @@ class FileConstructor:
 
     def build_file(self):
         fun_decl, tree_decl = self.write_file()
-        heap_cond = statements.makeCondSort(fun_decl.getPtrIdSort())
 
         for line, instruction in self.visitor.stmts_bindings.items():
             if isinstance(instruction, c_ast.Assignment):
@@ -45,12 +44,12 @@ class FileConstructor:
                     self.succ.append(line + 1)
 
             elif isinstance(instruction, c_ast.While):
-                cond = self.__conditions_handler(instruction, heap_cond)
+                cond = self.__conditions_handler(instruction)
                 self.inst.append(statements.While(cond))
                 self.succ.append(self.visitor.constructs_info[line])
 
             elif isinstance(instruction, c_ast.If):
-                cond = self.__conditions_handler(instruction, heap_cond)
+                cond = self.__conditions_handler(instruction)
                 self.inst.append(statements.If(cond))
                 self.succ.append(self.visitor.constructs_info[line])
 
@@ -168,7 +167,7 @@ class FileConstructor:
 
         return statement
 
-    def __conditions_handler(self, node, heap_cond):
+    def __conditions_handler(self, node):
         cond = None
         if isinstance(node.cond, c_ast.ID):
             """ case: cond(a) """
@@ -181,12 +180,12 @@ class FileConstructor:
                     self.visitor.function_pointers:
                 if node.cond.op == "==":
                     """ case: cond(p == q) """
-                    cond = heap_cond.Eq(self.fun_vars[node.cond.left.name],
-                                        self.fun_vars[node.cond.right.name])
+                    cond = conditions.Eq(self.fun_vars[node.cond.left.name],
+                                         self.fun_vars[node.cond.right.name])
                 elif node.cond.op == "!=":
                     """ case: cond(p != q) """
-                    cond = heap_cond.Neq(self.fun_vars[node.cond.left.name],
-                                         self.fun_vars[node.cond.right.name])
+                    cond = conditions.Neq(self.fun_vars[node.cond.left.name],
+                                          self.fun_vars[node.cond.right.name])
             else:
                 cond = "{} {} {}".format(self.fun_vars[node.cond.left.name], node.cond.op,
                                          self.fun_vars[node.cond.right.name])
