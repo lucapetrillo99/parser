@@ -8,7 +8,7 @@ class FunctionVisitor(c_ast.NodeVisitor):
         self.__variables_info = {}
         self.__pointers_info = []
         self.__return_line = []
-        self.functions = {}
+        self.__functions = {}
 
     def visit_Decl(self, node):
         if not self.__in_function:
@@ -36,15 +36,15 @@ class FunctionVisitor(c_ast.NodeVisitor):
                         if node_type == 'bool':
                             self.__variables_info[decl.name] = z3.BoolSort()
 
-    def visit_FuncDef(self, node):
-        self.functions[node.decl.name] = node
+    def visit_FuncDef(self, ast):
+        self.__functions[ast.decl.name] = ast
 
         # for each function finds the last return statement
-        inst_num = len(node.body.block_items) - 1
-        return_line = node.body.block_items[inst_num].coord.line
+        inst_num = len(ast.body.block_items) - 1
+        return_line = ast.body.block_items[inst_num].coord.line
         self.__return_line.append(return_line)
         self.__in_function = True
-        self.generic_visit(node.body)
+        self.generic_visit(ast.body)
         self.__in_function = False
 
     @property
@@ -54,6 +54,10 @@ class FunctionVisitor(c_ast.NodeVisitor):
     @property
     def pointers_info(self):
         return self.__pointers_info
+
+    @property
+    def functions(self):
+        return self.__functions
 
     @property
     def return_line(self):
