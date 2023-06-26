@@ -10,6 +10,7 @@ class AstVisitor(c_ast.NodeVisitor):
 
     :param return_line: The line number of the last "return" in the analyzed code
     """
+
     def __init__(self, return_line):
         self.__line_number = 0
         self.__stmts_bindings = {}  # dictionary to keep track of lines of code and instructions
@@ -84,6 +85,9 @@ class AstVisitor(c_ast.NodeVisitor):
                     self.__constructs_info[curr_line_number - 1], self.__line_number)
                 self.visit(node.iffalse)
                 self.__then_successors[last_if_true] = self.__line_number
+            else:
+                self.__constructs_info[curr_line_number - 1] = (
+                    self.__constructs_info[curr_line_number - 1], self.__line_number)
 
         elif isinstance(node, c_ast.While):
             curr_line_number = self.__line_number

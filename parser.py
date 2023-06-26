@@ -18,7 +18,7 @@ if __name__ == "__main__":
     fun_vis = FunctionVisitor()
     fun_vis.visit(ast)
     tree_decl = None
-    F = []
+    functions = []
     for i, (f_name, body) in enumerate(fun_vis.functions.items()):
 
         # visits the AST of each explored function
@@ -28,4 +28,4 @@ if __name__ == "__main__":
 
         # create z3 compatible statements
         tree_decl, fun = f_cons.build_statements()
-        F.append(fun)
+        functions.append(fun)
