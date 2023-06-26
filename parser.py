@@ -1,37 +1,31 @@
-from __future__ import print_function
-import argparse
 import sys
-import statements
-
-# from z3 import *
-
-# This is not required if you've installed pycparser into
-# your site-packages/ with setup.py
-sys.path.extend(['.', '..'])
+import argparse
 from ast_visitor import AstVisitor
 from function_visitor import FunctionVisitor
-from file_costructor import FileConstructor
-from pycparser import parse_file, c_generator, c_ast, c_parser
+from statements_handler import StatementsHandler
+
+sys.path.extend(['.', '..'])
+from pycparser import parse_file
 
 if __name__ == "__main__":
-    argparser = argparse.ArgumentParser('Dump AST')
-    argparser.add_argument('filename',
-                           default='examples/c_files/basic.c',
-                           nargs='?',
-                           help='name of file to parse')
-    args = argparser.parse_args()
+    arg_parser = argparse.ArgumentParser('Parse a C file')
+    arg_parser.add_argument('filename', help='name of file to parse')
+    args = arg_parser.parse_args()
 
-    ast = parse_file(args.filename, use_cpp=True,
-                     cpp_path='cpp',
-                     cpp_args=r'-Iutils/fake_libc_include')
+    ast = parse_file(args.filename, use_cpp=True, cpp_path='cpp', cpp_args=r'-Iutils/fake_libc_include')
 
-    # ast.show(showcoord=True)
+    # explores all functions in the code
     fun_vis = FunctionVisitor()
     fun_vis.visit(ast)
+    tree_decl = None
     F = []
     for i, (f_name, body) in enumerate(fun_vis.functions.items()):
+
+        # visits the AST of each explored function
         visitor = AstVisitor(fun_vis.return_line[i])
         visitor.visit(body)
-        f_cons = FileConstructor(fun_vis, visitor, f_name)
-        tree_decl, fun = f_cons.build_file()
+        f_cons = StatementsHandler(fun_vis, visitor, f_name)
+
+        # create z3 compatible statements
+        tree_decl, fun = f_cons.build_statements()
         F.append(fun)

@@ -3,17 +3,27 @@ from pycparser import c_ast
 
 
 class FunctionVisitor(c_ast.NodeVisitor):
+    """
+    A custom implementation of the NodeVisitor class to analyze all functions in the file.
+    This class explores all external declarations to functions. It also separates the body of each function with its
+    function name.
+    """
+
     def __init__(self):
         self.__in_function = False
         self.__variables_info = {}
         self.__pointers_info = []
         self.__return_line = []
-        self.functions = {}
+        self.__functions = {}
 
     def visit_Decl(self, node):
         if not self.__in_function:
+
+            # visits all pointer declarations
             if isinstance(node.type, c_ast.PtrDecl):
                 self.__pointers_info.append(node.name)
+
+            # visits all variable declarations
             elif isinstance(node.type, c_ast.TypeDecl):
                 node_type = node.type.type.names[0]
                 if node_type == 'int':
@@ -22,6 +32,8 @@ class FunctionVisitor(c_ast.NodeVisitor):
                     self.__variables_info[node.name] = z3.RealSort()
                 if node_type == 'bool':
                     self.__variables_info[node.name] = z3.BoolSort()
+
+            # visits all struct declarations
             elif isinstance(node.type, c_ast.Struct):
                 declarations = node.type.decls
                 for decl in declarations:
@@ -36,15 +48,15 @@ class FunctionVisitor(c_ast.NodeVisitor):
                         if node_type == 'bool':
                             self.__variables_info[decl.name] = z3.BoolSort()
 
-    def visit_FuncDef(self, node):
-        self.functions[node.decl.name] = node
+    def visit_FuncDef(self, ast):
+        self.__functions[ast.decl.name] = ast
 
         # for each function finds the last return statement
-        inst_num = len(node.body.block_items) - 1
-        return_line = node.body.block_items[inst_num].coord.line
+        inst_num = len(ast.body.block_items) - 1
+        return_line = ast.body.block_items[inst_num].coord.line
         self.__return_line.append(return_line)
         self.__in_function = True
-        self.generic_visit(node.body)
+        self.generic_visit(ast.body)
         self.__in_function = False
 
     @property
@@ -54,6 +66,10 @@ class FunctionVisitor(c_ast.NodeVisitor):
     @property
     def pointers_info(self):
         return self.__pointers_info
+
+    @property
+    def functions(self):
+        return self.__functions
 
     @property
     def return_line(self):
