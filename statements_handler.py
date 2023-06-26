@@ -20,6 +20,7 @@ class StatementsHandler:
     fun_name : str
         the name of the function to be analyzed
     """
+
     def __init__(self, fun_visitor, visitor, fun_name):
         self.__visitor = visitor
         self.__fun_visitor = fun_visitor
@@ -115,7 +116,7 @@ class StatementsHandler:
         for name, value in self.__visitor.function_variables.items():
             self.__fun_vars[name] = fun_decl.getVar(name, value)
 
-        return fun_decl, tree_decl
+        return tree_decl, fun_decl
 
     def __unary_assignment_handler(self, node):
         is_left_ptr = False
@@ -191,8 +192,10 @@ class StatementsHandler:
             cond = self.__fun_vars[node.cond.name]
         elif isinstance(node.cond, c_ast.BinaryOp):
             if isinstance(node.cond.left, c_ast.UnaryOp):
+                """ case: cond(*p != *) """
                 left = node.cond.left.expr.name
             if isinstance(node.cond.right, c_ast.UnaryOp):
+                """ case: cond(* != *q) """
                 right = node.cond.right.expr.name
             if isinstance(node.cond.left, c_ast.ID):
                 left = node.cond.left.name
