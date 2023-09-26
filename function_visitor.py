@@ -30,6 +30,8 @@ class FunctionVisitor(c_ast.NodeVisitor):
                     self.__variables_info[node.name] = z3.IntSort()
                 if node_type == 'double':
                     self.__variables_info[node.name] = z3.RealSort()
+                if node_type == 'float':
+                    self.__variables_info[node.name] = z3.RealSort()
                 if node_type == 'bool':
                     self.__variables_info[node.name] = z3.BoolSort()
 
