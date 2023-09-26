@@ -1,5 +1,6 @@
 import z3
 import statements
+import warnings
 from pycparser import c_ast
 
 
@@ -33,6 +34,8 @@ class AstVisitor(c_ast.NodeVisitor):
                         self.__function_variables[decl.name] = z3.IntSort()
                     if node_type == 'double':
                         self.__function_variables[decl.name] = z3.RealSort()
+                    if node_type == 'float':
+                        self.__function_variables[decl.name] = z3.RealSort()
                     if node_type == 'bool':
                         self.__function_variables[decl.name] = z3.BoolSort()
 
@@ -49,6 +52,8 @@ class AstVisitor(c_ast.NodeVisitor):
                         if node_type == 'int':
                             self.__function_variables[stmt.name] = z3.IntSort()
                         if node_type == 'double':
+                            self.__function_variables[stmt.name] = z3.RealSort()
+                        if node_type == 'float':
                             self.__function_variables[stmt.name] = z3.RealSort()
                         if node_type == 'bool':
                             self.__function_variables[stmt.name] = z3.BoolSort()
@@ -100,6 +105,10 @@ class AstVisitor(c_ast.NodeVisitor):
             curr_line_number = self.__line_number
             self.visit(node.stmt)
             self.__constructs_info[curr_line_number - 1] = (curr_line_number, self.__line_number)
+        elif isinstance(node, c_ast.FuncCall):
+            message = "Within the program there is a function call named: '{}' to the line: {}".format(node.name.name,
+                                                                                                     node.coord.line)
+            warnings.warn(message)
         elif isinstance(node, c_ast.EmptyStatement):
             pass
         else:
