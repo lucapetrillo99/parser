@@ -33,9 +33,9 @@ def __print_statements(f_cons):
 
         if isinstance(inst, statements.HeapCondAssign):
             if isinstance(inst.heap_cond, conditions.NeqNil):
-                print("listing[{}] => HeapCondAssign: {} = {} != NULL".format(i, inst.dstVarId, inst.heap_cond.ptr1))
+                print("listing[{}] => HeapCondAssign: {} = {} != NULL".format(i, inst.dstVarId, inst.heap_cond.ptr))
             elif isinstance(inst.heap_cond, conditions.EqNil):
-                print("listing[{}] => HeapCondAssign: {} = {} == NULL".format(i, inst.dstVarId, inst.heap_cond.ptr1))
+                print("listing[{}] => HeapCondAssign: {} = {} == NULL".format(i, inst.dstVarId, inst.heap_cond.ptr))
             else:
                 print("listing[{}] => HeapCondAssign: {} = {}".format(i, inst.dstVarId, inst.heap_cond))
 
