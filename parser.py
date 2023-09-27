@@ -1,4 +1,5 @@
 import sys
+import debug
 import argparse
 from ast_visitor import AstVisitor
 from function_visitor import FunctionVisitor
@@ -10,6 +11,9 @@ from pycparser import parse_file
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser('Parse a C file')
     arg_parser.add_argument('filename', help='name of file to parse')
+    arg_parser.add_argument('--print-result', action='store_true')
+    arg_parser.add_argument('--no-print-result', dest='print', action='store_false')
+    arg_parser.set_defaults(print_result=False)
     args = arg_parser.parse_args()
 
     ast = parse_file(args.filename, use_cpp=True, cpp_path='cpp', cpp_args=r'-Iutils/fake_libc_include')
@@ -29,3 +33,6 @@ if __name__ == "__main__":
         # create z3 compatible statements
         tree_decl, fun = f_cons.build_statements()
         functions.append(fun)
+
+        if args.print_result:
+            debug.print_result(tree_decl, fun, f_cons)
