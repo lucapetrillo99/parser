@@ -219,3 +219,19 @@ class StatementsHandler:
                                          self.__fun_vars[right])
 
         return cond
+
+    @property
+    def instructions(self):
+        return self.__instructions
+
+    @property
+    def successors(self):
+        return self.__successors
+
+    @property
+    def vars(self):
+        return self.__vars
+
+    @property
+    def fun_vars(self):
+        return self.__fun_vars
