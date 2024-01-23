@@ -11,8 +11,9 @@ from pycparser import parse_file
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser('Parse a C file')
     arg_parser.add_argument('filename', help='name of file to parse')
-    arg_parser.add_argument('--print-result', action='store_true')
-    arg_parser.add_argument('--no-print-result', dest='print', action='store_false')
+    arg_parser.add_argument('--print-result', action='store_true', help="prints the result of the instructions")
+    arg_parser.add_argument('--no-print-result', dest='print', action='store_false',
+                            help="does not print the result of the instruction")
     arg_parser.set_defaults(print_result=False)
     args = arg_parser.parse_args()
 
