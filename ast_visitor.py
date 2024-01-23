@@ -1,5 +1,5 @@
 import z3
-import statements
+from externals import statements
 import warnings
 from pycparser import c_ast
 

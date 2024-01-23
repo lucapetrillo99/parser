@@ -1,6 +1,4 @@
-import function
-import statements
-import conditions
+from externals import conditions, function, statements
 from pycparser import c_ast
 
 

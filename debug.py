@@ -1,5 +1,4 @@
-import statements
-import conditions
+from externals import conditions, statements
 
 
 def print_result(tree_decl, fun_decl, f_cons):
